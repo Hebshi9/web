@@ -1,0 +1,300 @@
+{
+    "orders": [
+        {
+            "package": "basic",
+            "packageName": "\u0627\u0644\u0628\u0627\u0642\u0629 \u0627\u0644\u0623\u0633\u0627\u0633\u064a\u0629",
+            "basePrice": 159,
+            "upsellServices": {
+                "coverLetter": false,
+                "interviewPrep": false
+            },
+            "personalInfo": {
+                "fullName": "\u0627\u062d\u0645\u062f",
+                "phone": "0503678789",
+                "email": "ahmed_hebshi93@hotmail.com"
+            },
+            "goals": {
+                "dreamCompanies": "\u0627\u062d\u0645\u062f",
+                "achievements": "\u0627\u0628\u062f\u0628\u0628",
+                "targetPosition": "\u062e\u0644\u0627\u0635"
+            },
+            "discountCode": "",
+            "discountPercentage": 0,
+            "totalPrice": 159,
+            "status": "\u062c\u062f\u064a\u062f",
+            "createdAt": "2025-08-09T07:49:18.141306",
+            "assignedTo": "",
+            "internalNotes": "",
+            "id": "d029f78b-45b6-4e1d-b39e-e273b22c4d1a"
+        },
+        {
+            "package": "basic",
+            "packageName": "\u0627\u0644\u0628\u0627\u0642\u0629 \u0627\u0644\u0623\u0633\u0627\u0633\u064a\u0629",
+            "basePrice": 159,
+            "upsellServices": {
+                "coverLetter": false,
+                "interviewPrep": false
+            },
+            "personalInfo": {
+                "fullName": "\u0623\u062d\u0645\u062f \u0645\u062d\u0645\u062f \u0627\u0644\u0639\u0644\u064a",
+                "phone": "0501234567",
+                "email": "ahmed.ali@example.com"
+            },
+            "goals": {
+                "dreamCompanies": "",
+                "achievements": "",
+                "targetPosition": ""
+            },
+            "discountCode": "",
+            "discountPercentage": 0,
+            "totalPrice": 159,
+            "status": "\u062c\u062f\u064a\u062f",
+            "createdAt": "2025-08-09T08:05:20.112839",
+            "assignedTo": "",
+            "internalNotes": "",
+            "id": "58cb9ef8-0fbb-4d25-b1b4-28b76a914864"
+        },
+        {
+            "package": "basic",
+            "packageName": "\u0627\u0644\u0628\u0627\u0642\u0629 \u0627\u0644\u0623\u0633\u0627\u0633\u064a\u0629",
+            "basePrice": 159,
+            "upsellServices": {
+                "coverLetter": false,
+                "interviewPrep": false
+            },
+            "personalInfo": {
+                "fullName": "\u0623\u062d\u0645\u062f \u0645\u062d\u0645\u062f \u0627\u0644\u0639\u0644\u064a",
+            "phone": "0501234567",
+                "email": "ahmed.ali@example.com"
+            },
+            "goals": {
+                "dreamCompanies": "",
+                "achievements": "",
+                "targetPosition": ""
+            },
+            "discountCode": "",
+            "discountPercentage": 0,
+            "totalPrice": 159,
+            "status": "\u062c\u062f\u064a\u062f",
+            "createdAt": "2025-08-09T08:25:17.083737",
+            "assignedTo": "",
+            "internalNotes": "",
+            "id": "37522f15-9ffb-4c9c-b49c-4998496ba4ac"
+        },
+        {
+            "package": "basic",
+            "packageName": "\u0627\u0644\u0628\u0627\u0642\u0629 \u0627\u0644\u0623\u0633\u0627\u0633\u064a\u0629",
+            "basePrice": 159,
+            "upsellServices": {
+                "coverLetter": false,
+                "interviewPrep": false
+            },
+            "personalInfo": {
+                "fullName": " Cc",
+                "phone": "0503678789",
+                "email": "aaa@hotmail.com"
+            },
+            "goals": {
+                "dreamCompanies": "Cc",
+                "achievements": "   ",
+                "targetPosition": "Xxx"
+            },
+            "discountCode": "",
+            "discountPercentage": 0,
+            "totalPrice": 159,
+            "status": "\u062c\u062f\u064a\u062f",
+            "createdAt": "2025-08-09T08:27:37.216747",
+            "assignedTo": "",
+            "internalNotes": "",
+            "id": "b915c056-456b-4aca-a705-9fdf939e73ed"
+        },
+        {
+            "package": "basic",
+            "packageName": "\u0627\u0644\u0628\u0627\u0642\u0629 \u0627\u0644\u0623\u0633\u0627\u0633\u064a\u0629",
+            "basePrice": 159,
+            "upsellServices": {
+                "coverLetter": false,
+                "interviewPrep": false
+            },
+            "personalInfo": {
+                "fullName": "ahmed",
+                "phone": "05055555",
+                "email": "aa@hotmail.com"
+            },
+            "goals": {
+                "dreamCompanies": "Dd",
+                "achievements": "  ",
+                "targetPosition": "  "
+            },
+            "discountCode": "",
+            "discountPercentage": 0,
+            "totalPrice": 159,
+            "status": "\u062c\u062f\u064a\u062f",
+            "createdAt": "2025-08-09T08:29:52.129081",
+            "assignedTo": "",
+            "internalNotes": "",
+            "id": "1a7b10a5-e2ce-49ad-9d45-f74599465c50"
+        },
+        {
+            "package": "basic",
+            "packageName": "\u0627\u0644\u0628\u0627\u0642\u0629 \u0627\u0644\u0623\u0633\u0627\u0633\u064a\u0629",
+            "basePrice": 159,
+            "upsellServices": {
+                "coverLetter": false,
+                "interviewPrep": false
+            },
+            "personalInfo": {
+                "fullName": "\u0627\u062e\u062a\u0628\u0627\u0631 STCPay",
+                "phone": "0503678789",
+                "email": "test@example.com"
+            },
+            "goals": {
+                "dreamCompanies": "",
+                "achievements": "",
+                "targetPosition": ""
+            },
+            "discountCode": "",
+            "discountPercentage": 0,
+            "totalPrice": 159,
+            "status": "\u062c\u062f\u064a\u062f",
+            "createdAt": "2025-08-09T08:37:12.077290",
+            "assignedTo": "",
+            "internalNotes": "",
+            "id": "1135a174-9542-4c5b-a598-d723efd14210"
+        },
+        {
+            "package": "basic",
+            "packageName": "\u0627\u0644\u0628\u0627\u0642\u0629 \u0627\u0644\u0623\u0633\u0627\u0633\u064a\u0629",
+            "basePrice": 159,
+            "upsellServices": {
+                "coverLetter": false,
+                "interviewPrep": false
+            },
+            "personalInfo": {
+                "fullName": "\u062f\u062f",
+                "phone": "\u0660\u0665\u0660\u0662\u0662\u0662\u0662\u0662\u0662\u0668\u0665",
+                "email": "ahmed_hebshi93@hotmail.com"
+            },
+            "goals": {
+                "dreamCompanies": "\u0628\u0628",
+                "achievements": "\u062f\u062f",
+                "targetPosition": "\u0637\u0630"
+            },
+            "discountCode": "",
+            "discountPercentage": 0,
+            "totalPrice": 159,
+            "status": "\u062c\u062f\u064a\u062d\u062f",
+            "createdAt": "2025-08-09T08:49:20.564179",
+            "assignedTo": "",
+            "internalNotes": "",
+            "id": "c98e5b0f-2a80-4132-94e1-a57be3ed0c7f"
+        },
+        {
+            "package": "basic",
+            "packageName": "\u0627\u0644\u0628\u0627\u0642\u0629 \u0627\u0644\u0623\u0633\u0627\u0633\u064a\u0629",
+            "basePrice": 159,
+            "upsellServices": {
+                "coverLetter": false,
+                "interviewPrep": false
+            },
+            "personalInfo": {
+                "fullName": "\u0627\u062d\u0645\u062f",
+                "phone": "\u0627\u0644\u062d\u0628\u0634\u064a",
+                "email": "ahmed_hebshi93@hotmail.com"
+            },
+            "goals": {
+                "dreamCompanies": "\u0627\u0631\u0627\u0645\u0643\u0648",
+                "achievements": "\u062e\u0647\u062a\u062d\u0646\u062e\u0647\u062a",
+                "targetPosition": "\u0627\u0628\u0628\u0628\u0641"
+            },
+            "discountCode": "",
+            "discountPercentage": 0,
+            "totalPrice": 159,
+            "status": "\u062c\u062f\u064a\u062f",
+            "createdAt": "2025-08-09T10:54:39.707137",
+            "assignedTo": "",
+            "internalNotes": "",
+            "id": "8506cc10-abac-46cf-ad37-af0aca8b2350"
+        },
+        {
+            "package": "basic",
+            "packageName": "\u0627\u0644\u0628\u0627\u0642\u0629 \u0627\u0644\u0623\u0633\u0627\u0633\u064a\u0629",
+            "basePrice": 159,
+            "upsellServices": {
+                "coverLetter": false,
+                "interviewPrep": false
+            },
+            "personalInfo": {
+                "fullName": "Test User",
+                "phone": "0501234567",
+                "email": "test@example.com"
+            },
+            "goals": {
+                "dreamCompanies": "",
+                "achievements": "",
+                "targetPosition": ""
+            },
+            "discountCode": "",
+            "discountPercentage": 0,
+            "totalPrice": 159,
+            "status": "\u062c\u062f\u064a\u062f",
+            "createdAt": "2025-08-09T10:56:30.444355",
+            "assignedTo": "",
+            "internalNotes": "",
+            "id": "e6530374-082b-46a5-900f-6d323987a9f5"
+        }
+    ],
+    "customers": [
+        {
+            "fullName": "\u0627\u062d\u0645\u062f",
+            "phone": "0503678789",
+            "email": "ahmed_hebshi93@hotmail.com",
+            "orders": [
+                "d029f78b-45b6-4e1d-b39e-e273b22c4d1a",
+                "c98e5b0f-2a80-4132-94e1-a57be3ed0c7f",
+                "8506cc10-abac-46cf-ad37-af0aca8b2350"
+            ],
+            "lastOrderDate": "2025-08-09T10:54:39.707661"
+        },
+        {
+            "fullName": "\u0623\u062d\u0645\u062f \u0645\u062d\u0645\u062f \u0627\u0644\u0639\u0644\u064a",
+            "phone": "0501234567",
+            "email": "ahmed.ali@example.com",
+            "orders": [
+                "58cb9ef8-0fbb-4d25-b1b4-28b76a914864",
+                "37522f15-9ffb-4c9c-b49c-4998496ba4ac"
+            ],
+            "lastOrderDate": "2025-08-09T08:25:17.084071"
+        },
+        {
+            "fullName": " Cc",
+            "phone": "0503678789",
+            "email": "aaa@hotmail.com",
+            "orders": [
+                "b915c056-456b-4aca-a705-9fdf939e73ed"
+            ],
+            "lastOrderDate": "2025-08-09T08:27:37.217100"
+        },
+        {
+            "fullName": "ahmed",
+            "phone": "05055555",
+            "email": "aa@hotmail.com",
+            "orders": [
+                "1a7b10a5-e2ce-49ad-9d45-f74599465c50"
+            ],
+            "lastOrderDate": "2025-08-09T08:29:52.129497"
+        },
+        {
+            "fullName": "\u0627\u062e\u062a\u0628\u0627\u0631 STCPay",
+            "phone": "0503678789",
+            "email": "test@example.com",
+            "orders": [
+                "1135a174-9542-4c5b-a598-d723efd14210",
+                "e6530374-082b-46a5-900f-6d323987a9f5"
+            ],
+            "lastOrderDate": "2025-08-09T10:56:30.444879"
+        }
+    ],
+    "last_order_sequence": 10
+}
+

@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة التحكم - سلس</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'tajawal': ['Tajawal', 'sans-serif'],
+                    },
+                    colors: {
+                        'sals-primary': '#1e40af',
+                        'sals-secondary': '#3b82f6',
+                        'sals-accent': '#f59e0b',
+                        'sals-dark': '#1f2937',
+                        'sals-light': '#f8fafc'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Tajawal', sans-serif;
+        }
+        .sidebar {
+            transform: translateX(0%);
+            transition: transform 0.3s ease;
+        }
+        .sidebar.hidden {
+            transform: translateX(100%);
+        }
+        @media (max-width: 1023px) {
+            .sidebar {
+                position: fixed;
+                top: 0;
+                right: 0;
+                height: 100%;
+                z-index: 1000;
+                box-shadow: -2px 0 5px rgba(0,0,0,0.2);
+            }
+            .sidebar.hidden {
+                transform: translateX(100%);
+            }
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            overflow-y: auto; /* Allow scrolling for modal content */
+        }
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            max-width: 90%; /* Adjust modal width for smaller screens */
+            width: auto; /* Allow content to dictate width */
+            margin: 20px auto; /* Add margin for better spacing */
+        }
+        @media (max-width: 767px) {
+            .grid-cols-1.md\:grid-cols-2.lg\:grid-cols-4 > div {
+                margin-bottom: 1rem; /* Add space between grid items */
+            }
+            .grid-cols-1.md\:grid-cols-4 > div {
+                margin-bottom: 1rem; /* Add space between filter items */
+            }
+            .overflow-x-auto {
+                overflow-x: scroll; /* Enable horizontal scrolling for tables */
+            }
+        }
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status-new { background-color: #dbeafe; color: #1e40af; }
+        .status-progress { background-color: #fef3c7; color: #d97706; }
+        .status-completed { background-color: #dcfce7; color: #16a34a; }
+        .status-cancelled { background-color: #fee2e2; color: #dc2626; }
+    </style>
+</head>
+<body class="bg-gray-100 font-tajawal">
+    <!-- Login Modal -->
+    <div id="loginModal" class="modal show">
+        <div class="bg-white rounded-lg max-w-md w-full mx-4 p-8">
+            <div class="text-center mb-8">
+                <h2 class="text-3xl font-bold text-sals-primary mb-2">سلس</h2>
+                <p class="text-gray-600">لوحة التحكم الإدارية</p>
+            </div>
+            
+            <form id="loginForm">
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">اسم المستخدم</label>
+                    <input type="text" id="username" required class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-sals-primary focus:border-transparent">
+                </div>
+                
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">كلمة المرور</label>
+                    <input type="password" id="password" required class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-sals-primary focus:border-transparent">
+                </div>
+                
+                <button type="submit" class="w-full bg-sals-primary text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition-colors">
+                    تسجيل الدخول
+                </button>
+                
+                <div id="loginError" class="mt-4 text-red-600 text-sm text-center hidden"></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div id="dashboard" class="hidden">
+        <!-- Header -->
+        <header class="bg-white shadow-sm border-b">
+            <div class="flex justify-between items-center px-6 py-4">
+                <div class="flex items-center">
+                    <button id="sidebarToggle" class="lg:hidden ml-4 text-gray-600">
+                        <i class="fas fa-bars text-xl"></i>
+                    </button>
+                    <h1 class="text-2xl font-bold text-sals-primary">لوحة التحكم - سلس</h1>
+                </div>
+                
+                <div class="flex items-center space-x-reverse space-x-4">
+                    <div class="text-sm text-gray-600">
+                        مرحباً، <span id="adminName">المدير</span>
+                    </div>
+                    <button onclick="logout()" class="text-red-600 hover:text-red-800">
+                        <i class="fas fa-sign-out-alt"></i>
+                        خروج
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <div class="flex">
+            <!-- Sidebar -->
+            <aside id="sidebar" class="sidebar bg-white w-64 min-h-screen shadow-sm">
+                <nav class="p-6">
+                    <ul class="space-y-2">
+                        <li>
+                            <button onclick="showSection('overview')" class="nav-item w-full text-right p-3 rounded-lg hover:bg-gray-100 transition-colors">
+                                <i class="fas fa-chart-line ml-3"></i>
+                                نظرة عامة
+                            </button>
+                        </li>
+                        <li>
+                            <button onclick="showSection('orders')" class="nav-item w-full text-right p-3 rounded-lg hover:bg-gray-100 transition-colors">
+                                <i class="fas fa-shopping-cart ml-3"></i>
+                                إدارة الطلبات
+                            </button>
+                        </li>
+                        <li>
+                            <button onclick="showSection('customers')" class="nav-item w-full text-right p-3 rounded-lg hover:bg-gray-100 transition-colors">
+                                <i class="fas fa-users ml-3"></i>
+                                إدارة العملاء
+                            </button>
+                        </li>
+                        <li>
+                            <button onclick="showSection('team')" class="nav-item w-full text-right p-3 rounded-lg hover:bg-gray-100 transition-colors">
+                                <i class="fas fa-user-tie ml-3"></i>
+                                إدارة الفريق
+                            </button>
+                        </li>
+                        <li>
+                            <button onclick="showSection('discounts')" class="nav-item w-full text-right p-3 rounded-lg hover:bg-gray-100 transition-colors">
+                                <i class="fas fa-tags ml-3"></i>
+                                كوبونات الخصم
+                            </button>
+                        </li>
+                        <li>
+                            <button onclick="showSection('reports')" class="nav-item w-full text-right p-3 rounded-lg hover:bg-gray-100 transition-colors">
+                                <i class="fas fa-chart-bar ml-3"></i>
+                                التقارير المالية
+                            </button>
+                        </li>
+                    </ul>
+                </nav>
+            </aside>
+
+            <!-- Main Content -->
+            <main class="flex-1 p-6">
+                <!-- Overview Section -->
+                <div id="overview-section" class="section">
+                    <div class="mb-8">
+                        <h2 class="text-2xl font-bold text-gray-800 mb-2">نظرة عامة</h2>
+                        <p class="text-gray-600">ملخص سريع عن أداء المنصة</p>
+                    </div>
+
+                    <!-- Stats Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <div class="flex items-center">
+                                <div class="p-3 rounded-full bg-blue-100 text-blue-600">
+                                    <i class="fas fa-shopping-cart text-xl"></i>
+                                </div>
+                                <div class="mr-4">
+                                    <p class="text-sm text-gray-600">إجمالي الطلبات</p>
+                                    <p class="text-2xl font-bold text-gray-800" id="totalOrders">0</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <div class="flex items-center">
+                                <div class="p-3 rounded-full bg-green-100 text-green-600">
+                                    <i class="fas fa-dollar-sign text-xl"></i>
+                                </div>
+                                <div class="mr-4">
+                                    <p class="text-sm text-gray-600">إجمالي الإيرادات</p>
+                                    <p class="text-2xl font-bold text-gray-800" id="totalRevenue">0 ر.س</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <div class="flex items-center">
+                                <div class="p-3 rounded-full bg-yellow-100 text-yellow-600">
+                                    <i class="fas fa-users text-xl"></i>
+                                </div>
+                                <div class="mr-4">
+                                    <p class="text-sm text-gray-600">عدد العملاء</p>
+                                    <p class="text-2xl font-bold text-gray-800" id="totalCustomers">0</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <div class="flex items-center">
+                                <div class="p-3 rounded-full bg-purple-100 text-purple-600">
+                                    <i class="fas fa-clock text-xl"></i>
+                                </div>
+                                <div class="mr-4">
+                                    <p class="text-sm text-gray-600">طلبات قيد التنفيذ</p>
+                                    <p class="text-2xl font-bold text-gray-800" id="pendingOrders">0</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Orders -->
+                    <div class="bg-white rounded-lg shadow">
+                        <div class="p-6 border-b">
+                            <h3 class="text-lg font-bold text-gray-800">أحدث الطلبات</h3>
+                        </div>
+                        <div class="p-6">
+                            <div id="recentOrdersList">
+                                <!-- Recent orders will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Orders Section -->
+                <div id="orders-section" class="section hidden">
+                    <div class="mb-8">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h2 class="text-2xl font-bold text-gray-800 mb-2">إدارة الطلبات</h2>
+                                <p class="text-gray-600">عرض وإدارة جميع طلبات العملاء</p>
+                            </div>
+                            <button onclick="refreshOrders()" class="bg-sals-primary text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                                <i class="fas fa-sync-alt ml-2"></i>
+                                تحديث
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Orders Filter -->
+                    <div class="bg-white rounded-lg shadow p-6 mb-6">
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">حالة الطلب</label>
+                                <select id="statusFilter" onchange="filterOrders()" class="w-full p-2 border rounded-lg">
+                                    <option value="">جميع الحالات</option>
+                                    <option value="جديد">جديد</option>
+                                    <option value="قيد التنفيذ">قيد التنفيذ</option>
+                                    <option value="مكتمل">مكتمل</option>
+                                    <option value="ملغي">ملغي</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">الباقة</label>
+                                <select id="packageFilter" onchange="filterOrders()" class="w-full p-2 border rounded-lg">
+                                    <option value="">جميع الباقات</option>
+                                    <option value="basic">الباقة الأساسية</option>
+                                    <option value="premium">الباقة المتقدمة</option>
+                                    <option value="vip">باقة VIP</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">المسؤول</label>
+                                <select id="assigneeFilter" onchange="filterOrders()" class="w-full p-2 border rounded-lg">
+                                    <option value="">جميع المسؤولين</option>
+                                    <!-- Team members will be loaded here -->
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">البحث</label>
+                                <input type="text" id="searchFilter" onkeyup="filterOrders()" placeholder="اسم العميل أو البريد الإلكتروني" class="w-full p-2 border rounded-lg">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Orders Table -->
+                    <div class="bg-white rounded-lg shadow overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">رقم الطلب</th>
+                                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">العميل</th>
+                                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">الباقة</th>
+                                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">المبلغ</th>
+                                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">الحالة</th>
+                                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">المسؤول</th>
+                                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">التاريخ</th>
+                                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">إجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ordersTableBody" class="bg-white divide-y divide-gray-200">
+                                    <!-- Orders will be loaded here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Customers Section -->
+                <div id="customers-section" class="section hidden">
+                    <div class="mb-8">
+                        <h2 class="text-2xl font-bold text-gray-800 mb-2">إدارة العملاء</h2>
+                        <p class="text-gray-600">عرض وإدارة بيانات العملاء</p>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">الاسم</th>
+                                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">البريد الإلكتروني</th>
+                                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">رقم الجوال</th>
+                                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">عدد الطلبات</th>
+                                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">آخر طلب</th>
+                                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">إجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="customersTableBody" class="bg-white divide-y divide-gray-200">
+                                    <!-- Customers will be loaded here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Team Section -->
+                <div id="team-section" class="section hidden">
+                    <div class="mb-8">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h2 class="text-2xl font-bold text-gray-800 mb-2">إدارة الفريق</h2>
+                                <p class="text-gray-600">إدارة أعضاء الفريق وصلاحياتهم</p>
+                            </div>
+                            <button onclick="showAddTeamMemberModal()" class="bg-sals-primary text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                                <i class="fas fa-plus ml-2"></i>
+                                إضافة عضو جديد
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">الاسم</th>
+                                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">البريد الإلكتروني</th>
+                                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">المنصب</th>
+                                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">الطلبات المسندة</th>
+                                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">الحالة</th>
+                                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">إجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="teamTableBody" class="bg-white divide-y divide-gray-200">
+                                    <!-- Team members will be loaded here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Discounts Section -->
+                <div id="discounts-section" class="section hidden">
+                    <div class="mb-8">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h2 class="text-2xl font-bold text-gray-800 mb-2">كوبونات الخصم</h2>
+                                <p class="text-gray-600">إنشاء وإدارة كوبونات الخصم</p>
+                            </div>
+                            <button onclick="showAddDiscountModal()" class="bg-sals-primary text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                                <i class="fas fa-plus ml-2"></i>
+                                إضافة كوبون جديد
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">كود الخصم</th>
+                                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">نسبة الخصم</th>
+                                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">عدد الاستخدامات</th>
+                                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">تاريخ الانتهاء</th>
+                                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">الحالة</th>
+                                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">إجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="discountsTableBody" class="bg-white divide-y divide-gray-200">
+                                    <!-- Discounts will be loaded here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reports Section -->
+                <div id="reports-section" class="section hidden">
+                    <div class="mb-8">
+                        <h2 class="text-2xl font-bold text-gray-800 mb-2">التقارير المالية</h2>
+                        <p class="text-gray-600">تحليل الأداء المالي والإحصائيات</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <h3 class="text-lg font-bold text-gray-800 mb-4">الإيرادات الشهرية</h3>
+                            <canvas id="revenueChart"></canvas>
+                        </div>
+
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <h3 class="text-lg font-bold text-gray-800 mb-4">توزيع الباقات</h3>
+                            <canvas id="packagesChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Order Details Modal -->
+    <div id="orderDetailsModal" class="modal">
+        <div class="bg-white rounded-lg max-w-4xl w-full mx-4 max-h-screen overflow-y-auto">
+            <div class="p-6 border-b">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-2xl font-bold text-sals-dark">تفاصيل الطلب</h3>
+                    <button onclick="closeOrderDetailsModal()" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="p-6" id="orderDetailsContent">
+                <!-- Order details will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <script src="js/firebase-config.js"></script>
+    <script src="js/admin.js"></script>
+    
+    <script>
+    // Override admin.js functions to use our backend API
+    document.addEventListener('DOMContentLoaded', function() {
+        // Override the loadDashboardData function
+        window.loadDashboardData = async function() {
+            try {
+                const response = await fetch('https://5000-ihu2eqlqjp7vakccehu8k-16b15953.manusvm.computer/api/orders');
+                if (response.ok) {
+                    const data = await response.json();
+                    allOrders = data.orders || [];
+                    console.log('Loaded orders:', allOrders);
+                } else {
+                    console.error('Failed to load orders');
+                    allOrders = [];
+                }
+            } catch (error) {
+                console.error('Error loading dashboard data:', error);
+                allOrders = [];
+            }
+        };
+        
+        // Override loadOverviewData to work with our data structure
+        window.loadOverviewData = function() {
+            const totalOrders = allOrders.length;
+            const totalRevenue = allOrders.reduce((sum, order) => sum + (order.totalPrice || 0), 0);
+            const totalCustomers = new Set(allOrders.map(order => order.personalInfo?.email)).size;
+            const pendingOrders = allOrders.filter(order => order.status === 'جديد' || order.status === 'قيد التنفيذ').length;
+            
+            document.getElementById('totalOrders').textContent = totalOrders;
+            document.getElementById('totalRevenue').textContent = `${totalRevenue.toLocaleString()} ر.س`;
+            document.getElementById('totalCustomers').textContent = totalCustomers;
+            document.getElementById('pendingOrders').textContent = pendingOrders;
+            
+            const recentOrdersList = document.getElementById('recentOrdersList');
+            recentOrdersList.innerHTML = '';
+            
+            if (allOrders.length === 0) {
+                recentOrdersList.innerHTML = '<p class="text-gray-500 text-center">لا توجد طلبات حتى الآن</p>';
+                return;
+            }
+            
+            const recentOrders = allOrders.slice(-5).reverse();
+            
+            recentOrders.forEach(order => {
+                const orderDiv = document.createElement('div');
+                orderDiv.className = 'flex justify-between items-center py-3 border-b last:border-b-0';
+                orderDiv.innerHTML = `
+                    <div>
+                        <p class="font-medium">${order.personalInfo?.fullName || 'غير محدد'}</p>
+                        <p class="text-sm text-gray-600">${order.packageName || 'غير محدد'}</p>
+                    </div>
+                    <div class="text-left">
+                        <p class="font-bold">${order.totalPrice || 0} ر.س</p>
+                        <span class="status-badge status-new">${order.status || 'جديد'}</span>
+                    </div>
+                `;
+                recentOrdersList.appendChild(orderDiv);
+            });
+        };
+        
+        // Override displayOrders function
+        window.displayOrders = function(orders) {
+            const tbody = document.getElementById('ordersTableBody');
+            tbody.innerHTML = '';
+            
+            if (orders.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center py-8 text-gray-500">لا توجد طلبات</td></tr>';
+                return;
+            }
+            
+            orders.forEach(order => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50';
+                
+                const createdDate = order.createdAt ? 
+                    new Date(order.createdAt).toLocaleDateString('ar-SA') : 
+                    'غير محدد';
+                
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        ${order.id ? order.id.substring(0, 8) + '...' : 'غير محدد'}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div>
+                            <div class="text-sm font-medium text-gray-900">${order.personalInfo?.fullName || 'غير محدد'}</div>
+                            <div class="text-sm text-gray-500">${order.personalInfo?.email || 'غير محدد'}</div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        ${order.packageName || 'غير محدد'}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        ${order.totalPrice || 0} ر.س
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="status-badge status-new">${order.status || 'جديد'}</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        ${order.assignedTo || 'غير مسند'}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        ${createdDate}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <button onclick="viewOrderDetails('${order.id}')" class="text-sals-primary hover:text-blue-700 ml-3">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button onclick="editOrder('${order.id}')" class="text-green-600 hover:text-green-800 ml-3">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button onclick="deleteOrder('${order.id}')" class="text-red-600 hover:text-red-800">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+        };
+        
+        // Initialize with empty arrays
+        allOrders = [];
+        allCustomers = [];
+        teamMembers = [];
+        discountCodes = [];
+    });
+    </script>
+</body>
+</html>
+

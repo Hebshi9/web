@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>سلس - المنصة المهنية الرائدة في المملكة العربية السعودية</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'tajawal': ['Tajawal', 'sans-serif'],
+                    },
+                    colors: {
+                        'sals-primary': '#1e40af',
+                        'sals-secondary': '#3b82f6',
+                        'sals-accent': '#f59e0b',
+                        'sals-dark': '#1f2937',
+                        'sals-light': '#f8fafc'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Tajawal', sans-serif;
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+        }
+        .floating-whatsapp {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            z-index: 1000;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .cv-upload-area {
+            border: 2px dashed #3b82f6;
+            border-radius: 8px;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .cv-upload-area:hover {
+            border-color: #1e40af;
+            background-color: #f8fafc;
+        }
+        .cv-upload-area.dragover {
+            border-color: #f59e0b;
+            background-color: #fef3c7;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-tajawal">
+    <!-- Floating WhatsApp Button -->
+    <a href="https://wa.me/966503678789" target="_blank" class="floating-whatsapp">
+        <div class="bg-green-500 text-white p-4 rounded-full shadow-lg hover:bg-green-600 transition-colors">
+            <i class="fab fa-whatsapp text-2xl"></i>
+        </div>
+    </a>
+
+    <!-- Header -->
+    <header class="gradient-bg text-white py-4 shadow-lg">
+        <div class="container mx-auto px-4">
+            <div class="flex justify-between items-center">
+                <div class="text-2xl font-bold">سلس</div>
+                <nav class="hidden md:flex space-x-reverse space-x-6">
+                    <a href="#services" class="hover:text-sals-accent transition-colors">خدماتنا</a>
+                    <a href="#portfolio" class="hover:text-sals-accent transition-colors">أعمالنا</a>
+                    <a href="#testimonials" class="hover:text-sals-accent transition-colors">آراء العملاء</a>
+                    <a href="#contact" class="hover:text-sals-accent transition-colors">تواصل معنا</a>
+                </nav>
+                <button class="md:hidden text-white">
+                    <i class="fas fa-bars text-xl"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="gradient-bg text-white py-20">
+        <div class="container mx-auto px-4 text-center">
+            <h1 class="text-4xl md:text-6xl font-bold mb-6">المنصة المهنية الرائدة</h1>
+            <p class="text-xl md:text-2xl mb-8 opacity-90">نساعدك في بناء مستقبلك المهني بأفضل الخدمات الاحترافية</p>
+            <div class="flex flex-col md:flex-row gap-4 justify-center">
+                <button onclick="scrollToServices()" class="bg-sals-accent text-sals-dark px-8 py-4 rounded-lg font-bold text-lg hover:bg-yellow-400 transition-colors">
+                    اطلب خدمتك الآن
+                </button>
+                <button onclick="scrollToCVAnalysis()" class="border-2 border-white text-white px-8 py-4 rounded-lg font-bold text-lg hover:bg-white hover:text-sals-primary transition-colors">
+                    حلل سيرتك مجاناً
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Discount Banner -->
+    <section class="bg-gradient-to-r from-red-500 to-pink-500 text-white py-4">
+        <div class="container mx-auto px-4">
+            <div class="text-center">
+                <div class="flex items-center justify-center space-x-reverse space-x-4">
+                    <i class="fas fa-gift text-2xl"></i>
+                    <div>
+                        <span class="font-bold text-lg">عرض خاص! خصم 15% على جميع الخدمات</span>
+                        <span class="block text-sm opacity-90">استخدم كود: SAVE15 (لفترة محدودة - مرة واحدة لكل عميل)</span>
+                    </div>
+                    <i class="fas fa-star text-2xl animate-pulse"></i>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CV Analysis Tool -->
+    <section id="cv-analysis" class="py-16 bg-white">
+        <div class="container mx-auto px-4">
+            <div class="max-w-4xl mx-auto text-center">
+                <h2 class="text-3xl md:text-4xl font-bold text-sals-dark mb-6">حلل سيرتك الذاتية مجاناً</h2>
+                <p class="text-lg text-gray-600 mb-8">احصل على تقييم فوري وتحليل شامل لسيرتك الذاتية بالذكاء الاصطناعي</p>
+                
+                <div class="bg-gray-50 rounded-lg p-8">
+                    <div id="cv-upload-area" class="cv-upload-area">
+                        <i class="fas fa-cloud-upload-alt text-4xl text-sals-secondary mb-4"></i>
+                        <h3 class="text-xl font-bold text-sals-dark mb-2">اسحب وأفلت ملف السيرة الذاتية هنا</h3>
+                        <p class="text-gray-600 mb-4">أو انقر للاختيار من جهازك</p>
+                        <p class="text-sm text-gray-500">يدعم ملفات PDF و DOCX</p>
+                        <input type="file" id="cv-file-input" accept=".pdf,.docx" class="hidden">
+                    </div>
+                    
+                    <div id="cv-analysis-result" class="hidden mt-8">
+                        <div class="bg-white rounded-lg p-6 shadow-md">
+                            <h4 class="text-2xl font-bold text-sals-primary mb-4">نتيجة التحليل</h4>
+                            <div class="grid md:grid-cols-2 gap-6">
+                                <div class="text-center">
+                                    <div class="text-4xl font-bold text-sals-accent mb-2" id="cv-score">85</div>
+                                    <p class="text-gray-600">التقييم العام من 100</p>
+                                </div>
+                                <div>
+                                    <h5 class="font-bold text-sals-dark mb-3">ملاحظات التحسين:</h5>
+                                    <ul id="cv-suggestions" class="text-right space-y-2">
+                                        <li class="flex items-start">
+                                            <i class="fas fa-check-circle text-green-500 ml-2 mt-1"></i>
+                                            <span>تنسيق ممتاز ومتوافق مع أنظمة ATS</span>
+                                        </li>
+                                        <li class="flex items-start">
+                                            <i class="fas fa-exclamation-triangle text-yellow-500 ml-2 mt-1"></i>
+                                            <span>يُنصح بإضافة المزيد من الكلمات المفتاحية</span>
+                                        </li>
+                                        <li class="flex items-start">
+                                            <i class="fas fa-times-circle text-red-500 ml-2 mt-1"></i>
+                                            <span>قسم المهارات يحتاج إلى تطوير</span>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="mt-6 text-center">
+                                <button onclick="showOrderModal('cv-improvement')" class="bg-sals-primary text-white px-6 py-3 rounded-lg font-bold hover:bg-blue-700 transition-colors">
+                                    احصل على سيرة ذاتية احترافية
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Services Section -->
+    <section id="services" class="py-16 bg-gray-50">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl md:text-4xl font-bold text-sals-dark mb-4">باقات خدماتنا</h2>
+                <p class="text-lg text-gray-600">اختر الباقة المناسبة لاحتياجاتك المهنية</p>
+            </div>
+            
+            <div class="grid md:grid-cols-3 gap-8">
+                <!-- Basic Package -->
+                <div class="bg-white rounded-lg shadow-lg p-8 hover:shadow-xl transition-shadow">
+                    <div class="text-center mb-6">
+                        <h3 class="text-2xl font-bold text-sals-dark mb-2">الباقة الأساسية</h3>
+                        <div class="text-3xl font-bold text-sals-primary">159 ر.س</div>
+                        <p class="text-sm text-gray-500 line-through">199 ر.س</p>
+                    </div>
+                    <ul class="space-y-3 mb-8">
+                        <li class="flex items-center">
+                            <i class="fas fa-check text-green-500 ml-2"></i>
+                            <span>كتابة سيرة ذاتية احترافية</span>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fas fa-check text-green-500 ml-2"></i>
+                            <span>تحسين للتوافق مع ATS</span>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fas fa-check text-green-500 ml-2"></i>
+                            <span>مراجعة واحدة مجانية</span>
+                        </li>
+                    </ul>
+                    <button onclick="showOrderModal('basic')" class="w-full bg-sals-primary text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition-colors">
+                        اطلب الآن
+                    </button>
+                </div>
+
+                <!-- Premium Package -->
+                <div class="bg-white rounded-lg shadow-lg p-8 hover:shadow-xl transition-shadow border-2 border-sals-accent">
+                    <div class="text-center mb-6">
+                        <div class="bg-sals-accent text-white px-3 py-1 rounded-full text-sm font-bold mb-2 inline-block">الأكثر طلباً</div>
+                        <h3 class="text-2xl font-bold text-sals-dark mb-2">الباقة المتقدمة</h3>
+                        <div class="text-3xl font-bold text-sals-primary">279 ر.س</div>
+                        <p class="text-sm text-gray-500 line-through">349 ر.س</p>
+                    </div>
+                    <ul class="space-y-3 mb-8">
+                        <li class="flex items-center">
+                            <i class="fas fa-check text-green-500 ml-2"></i>
+                            <span>كل ما في الباقة الأساسية</span>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fas fa-check text-green-500 ml-2"></i>
+                            <span>تحسين ملف LinkedIn</span>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fas fa-check text-green-500 ml-2"></i>
+                            <span>مراجعتان مجانيتان</span>
+                        </li>
+                    </ul>
+                    <button onclick="showOrderModal(\'premium\')" class="w-full bg-sals-accent text-sals-dark py-3 rounded-lg font-bold hover:bg-yellow-400 transition-colors">
+                        اطلب الآن
+                    </button>
+                </div>
+
+                <!-- VIP Package -->
+                <div class="bg-white rounded-lg shadow-lg p-8 hover:shadow-xl transition-shadow">
+                    <div class="text-center mb-6">
+                        <h3 class="text-2xl font-bold text-sals-dark mb-2">باقة VIP المتكاملة</h3>
+                        <div class="text-3xl font-bold text-sals-primary">399 ر.س</div>
+                        <p class="text-sm text-gray-500 line-through">499 ر.س</p>
+                    </div>
+                    <ul class="space-y-3 mb-8">
+                        <li class="flex items-center">
+                            <i class="fas fa-check text-green-500 ml-2"></i>
+                            <span>كل ما في الباقة المتقدمة</span>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fas fa-check text-green-500 ml-2"></i>
+                            <span>خطاب تغطية مخصص</span>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fas fa-check text-green-500 ml-2"></i>
+                            <span>متابعة لمدة شهر</span>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fas fa-check text-green-500 ml-2"></i>
+                            <span>مراجعات غير محدودة</span>
+                        </li>
+                    </ul>
+                    <button onclick="showOrderModal(\'vip\')"class="w-full bg-sals-primary text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition-colors">
+                        اطلب الآن
+                    </button>
+                </div>
+
+                <!-- LinkedIn Junior Package -->
+                <div class="bg-white rounded-lg shadow-lg p-8 hover:shadow-xl transition-shadow">
+                    <div class="text-center mb-6">
+                        <h3 class="text-2xl font-bold text-sals-dark mb-2">ملف LinkedIn - مبتدئ (0-2 سنوات)</h3>
+                        <div class="text-3xl font-bold text-sals-primary">120 ر.س</div>
+                        <p class="text-sm text-gray-500 line-through">150 ر.س</p>
+                    </div>
+                    <ul class="space-y-3 mb-8">
+                        <li class="flex items-center">
+                            <i class="fas fa-check text-green-500 ml-2"></i>
+                            <span>إنشاء أو تحسين ملف LinkedIn</span>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fas fa-check text-green-500 ml-2"></i>
+                            <span>تحسين الكلمات المفتاحية</span>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fas fa-check text-green-500 ml-2"></i>
+                            <span>نصائح للبحث عن وظائف</span>
+                        </li>
+                    </ul>
+                    <button onclick="showOrderModal(\'linkedin-junior\')" class="w-full bg-sals-primary text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition-colors">
+                        اطلب الآن
+                    </button>
+                </div>
+
+                <!-- LinkedIn Mid Package -->
+                <div class="bg-white rounded-lg shadow-lg p-8 hover:shadow-xl transition-shadow">
+                    <div class="text-center mb-6">
+                        <h3 class="text-2xl font-bold text-sals-dark mb-2">ملف LinkedIn - متوسط (3-8 سنوات)</h3>
+                        <div class="text-3xl font-bold text-sals-primary">200 ر.س</div>
+                        <p class="text-sm text-gray-500 line-through">250 ر.س</p>
+                    </div>
+                    <ul class="space-y-3 mb-8">
+                        <li class="flex items-center">
+                            <i class="fas fa-check text-green-500 ml-2"></i>
+                            <span>كل ما في باقة المبتدئ</span>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fas fa-check text-green-500 ml-2"></i>
+                            <span>صياغة ملخص احترافي</span>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fas fa-check text-green-500 ml-2"></i>
+                            <span>تحسين قسم الخبرات والإنجازات</span>
+                        </li>
+                    </ul>
+                    <button onclick="showOrderModal(\'linkedin-mid\')" class="w-full bg-sals-primary text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition-colors">
+                        اطلب الآن
+                    </button>
+                </div>
+
+                <!-- LinkedIn Senior Package -->
+                <div class="bg-white rounded-lg shadow-lg p-8 hover:shadow-xl transition-shadow">
+                    <div class="text-center mb-6">
+                        <h3 class="text-2xl font-bold text-sals-dark mb-2">ملف LinkedIn - خبير (8+ سنوات)</h3>
+                        <div class="text-3xl font-bold text-sals-primary">280 ر.س</div>
+                        <p class="text-sm text-gray-500 line-through">350 ر.س</p>
+                    </div>
+                    <ul class="space-y-3 mb-8">
+                        <li class="flex items-center">
+                            <i class="fas fa-check text-green-500 ml-2"></i>
+                            <span>كل ما في باقة المتوسط</span>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fas fa-check text-green-500 ml-2"></i>
+                            <span>استراتيجية بناء الشبكة</span>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fas fa-check text-green-500 ml-2"></i>
+                            <span>تحسين الظهور كقائد فكر</span>
+                        </li>
+                    </ul>
+                    <button onclick="showOrderModal(\'linkedin-senior\')" class="w-full bg-sals-primary text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition-colors">
+                        اطلب الآن
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Portfolio Section -->
+    <section id="portfolio" class="py-16 bg-white">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl md:text-4xl font-bold text-sals-dark mb-4">نماذج من أعمالنا</h2>
+                <p class="text-lg text-gray-600">شاهد نماذج من السير الذاتية التي أنجزناها لعملائنا</p>
+            </div>
+            
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="bg-gray-100 rounded-lg p-6 text-center">
+                    <div class="bg-white h-64 rounded-lg mb-4 flex items-center justify-center">
+                        <i class="fas fa-file-alt text-6xl text-gray-400"></i>
+                    </div>
+                    <h4 class="font-bold text-sals-dark">سيرة ذاتية - مهندس برمجيات</h4>
+                    <p class="text-gray-600 text-sm mt-2">تصميم احترافي متوافق مع ATS</p>
+                </div>
+                
+                <div class="bg-gray-100 rounded-lg p-6 text-center">
+                    <div class="bg-white h-64 rounded-lg mb-4 flex items-center justify-center">
+                        <i class="fas fa-file-alt text-6xl text-gray-400"></i>
+                    </div>
+                    <h4 class="font-bold text-sals-dark">سيرة ذاتية - مدير تسويق</h4>
+                    <p class="text-gray-600 text-sm mt-2">تركيز على الإنجازات والنتائج</p>
+                </div>
+                
+                <div class="bg-gray-100 rounded-lg p-6 text-center">
+                    <div class="bg-white h-64 rounded-lg mb-4 flex items-center justify-center">
+                        <i class="fas fa-file-alt text-6xl text-gray-400"></i>
+                    </div>
+                    <h4 class="font-bold text-sals-dark">سيرة ذاتية - طبيب</h4>
+                    <p class="text-gray-600 text-sm mt-2">تصميم أنيق يبرز الخبرات الطبية</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials Section -->
+    <section id="testimonials" class="py-16 bg-gray-50">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl md:text-4xl font-bold text-sals-dark mb-4">آراء عملائنا</h2>
+                <p class="text-lg text-gray-600">ماذا يقول عملاؤنا عن خدماتنا</p>
+            </div>
+            
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <div class="flex items-center mb-4">
+                        <div class="w-12 h-12 bg-sals-primary rounded-full flex items-center justify-center text-white font-bold">
+                            أ.م
+                        </div>
+                        <div class="mr-4">
+                            <h4 class="font-bold text-sals-dark">أحمد محمد</h4>
+                            <p class="text-gray-600 text-sm">مهندس برمجيات</p>
+                        </div>
+                    </div>
+                    <div class="flex mb-3">
+                        <i class="fas fa-star text-yellow-400"></i>
+                        <i class="fas fa-star text-yellow-400"></i>
+                        <i class="fas fa-star text-yellow-400"></i>
+                        <i class="fas fa-star text-yellow-400"></i>
+                        <i class="fas fa-star text-yellow-400"></i>
+                    </div>
+                    <p class="text-gray-700">"خدمة ممتازة وسيرة ذاتية احترافية ساعدتني في الحصول على وظيفة أحلامي. أنصح بشدة!"</p>
+                </div>
+                
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <div class="flex items-center mb-4">
+                        <div class="w-12 h-12 bg-sals-primary rounded-full flex items-center justify-center text-white font-bold">
+                            س.ع
+                        </div>
+                        <div class="mr-4">
+                            <h4 class="font-bold text-sals-dark">سارة العتيبي</h4>
+                            <p class="text-gray-600 text-sm">مديرة تسويق</p>
+                        </div>
+                    </div>
+                    <div class="flex mb-3">
+                        <i class="fas fa-star text-yellow-400"></i>
+                        <i class="fas fa-star text-yellow-400"></i>
+                        <i class="fas fa-star text-yellow-400"></i>
+                        <i class="fas fa-star text-yellow-400"></i>
+                        <i class="fas fa-star text-yellow-400"></i>
+                    </div>
+                    <p class="text-gray-700">"فريق محترف جداً وسرعة في التنفيذ. السيرة الذاتية كانت أفضل من توقعاتي."</p>
+                </div>
+                
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <div class="flex items-center mb-4">
+                        <div class="w-12 h-12 bg-sals-primary rounded-full flex items-center justify-center text-white font-bold">
+                            خ.ا
+                        </div>
+                        <div class="mr-4">
+                            <h4 class="font-bold text-sals-dark">خالد الأحمد</h4>
+                            <p class="text-gray-600 text-sm">طبيب</p>
+                        </div>
+                    </div>
+                    <div class="flex mb-3">
+                        <i class="fas fa-star text-yellow-400"></i>
+                        <i class="fas fa-star text-yellow-400"></i>
+                        <i class="fas fa-star text-yellow-400"></i>
+                        <i class="fas fa-star text-yellow-400"></i>
+                        <i class="fas fa-star text-yellow-400"></i>
+                    </div>
+                    <p class="text-gray-700">"استشارة مهنية رائعة ومتابعة مستمرة. حصلت على عدة عروض عمل بعد تحديث سيرتي الذاتية."</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section id="contact" class="py-16 bg-sals-dark text-white">
+        <div class="container mx-auto px-4 text-center">
+            <h2 class="text-3xl md:text-4xl font-bold mb-6">تواصل معنا</h2>
+            <p class="text-lg mb-8 opacity-90">نحن هنا لمساعدتك في بناء مستقبلك المهني</p>
+            
+            <div class="flex flex-col md:flex-row gap-8 justify-center items-center">
+                <div class="flex items-center">
+                    <i class="fab fa-whatsapp text-2xl ml-3"></i>
+                    <span class="text-lg">+966503678789</span>
+                </div>
+                <div class="flex items-center">
+                    <i class="fas fa-envelope text-2xl ml-3"></i>
+                    <span class="text-lg">info@sals.sa</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Order Modal -->
+    <div id="orderModal" class="modal">
+        <div class="bg-white rounded-lg max-w-2xl w-full mx-4 max-h-screen overflow-y-auto">
+            <div class="p-6 border-b">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-2xl font-bold text-sals-dark">تفاصيل الطلب</h3>
+                    <button onclick="closeOrderModal()" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="p-6">
+                <form id="orderForm">
+                    <!-- Package Selection -->
+                    <div class="mb-6">
+                        <h4 class="font-bold text-sals-dark mb-3">الباقة المختارة:</h4>
+                        <div id="selectedPackage" class="bg-gray-50 p-4 rounded-lg">
+                            <!-- Package details will be inserted here -->
+                        </div>
+                    </div>
+
+                    <!-- Upselling Options -->
+                    <div class="mb-6">
+                        <h4 class="font-bold text-sals-dark mb-3">خدمات إضافية:</h4>
+                        <div class="space-y-3">
+                            <label class="flex items-center">
+                                <input type="checkbox" id="coverLetter" class="ml-2" onchange="updateTotalPrice()">
+                                <span>كتابة خطاب تغطية (+79 ر.س)</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="checkbox" id="interviewPrep" class="ml-2" onchange="updateTotalPrice()">
+                                <span>محاكاة المقابلة الشخصية (+149 ر.س)</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Interactive Questionnaire -->
+                    <div class="mb-6">
+                        <h4 class="font-bold text-sals-dark mb-3">أهدافك المهنية:</h4>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">ما هي شركات أحلامك؟</label>
+                                <input type="text" id="dreamCompanies" class="w-full p-3 border rounded-lg" placeholder="مثال: أرامكو، سابك، STC">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">ما هي أهم إنجازاتك؟</label>
+                                <textarea id="achievements" class="w-full p-3 border rounded-lg h-24" placeholder="اذكر أهم إنجازاتك المهنية..."></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">ما هو المنصب المستهدف؟</label>
+                                <input type="text" id="targetPosition" class="w-full p-3 border rounded-lg" placeholder="مثال: مدير تسويق، مهندس برمجيات">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Personal Information -->
+                    <div class="mb-6">
+                        <h4 class="font-bold text-sals-dark mb-3">معلومات التواصل:</h4>
+                        <div class="grid md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">الاسم الكامل *</label>
+                                <input type="text" id="fullName" required class="w-full p-3 border rounded-lg">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">رقم الجوال *</label>
+                                <input type="tel" id="phone" required class="w-full p-3 border rounded-lg">
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">البريد الإلكتروني *</label>
+                                <input type="email" id="email" required class="w-full p-3 border rounded-lg">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Discount Coupon -->
+                    <div class="mb-6">
+                        <h4 class="font-bold text-sals-dark mb-3">كوبون الخصم:</h4>
+                        <div class="flex gap-2">
+                            <input type="text" id="discountCode" class="flex-1 p-3 border rounded-lg" placeholder="أدخل كود الخصم">
+                            <button type="button" onclick="applyDiscount()" class="bg-sals-secondary text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition-colors">
+                                تطبيق
+                            </button>
+                        </div>
+                        <div id="discountMessage" class="mt-2 text-sm"></div>
+                    </div>
+
+                    <!-- Total Price -->
+                    <div class="mb-6 bg-gray-50 p-4 rounded-lg">
+                        <div class="flex justify-between items-center text-lg font-bold">
+                            <span>المجموع الكلي:</span>
+                            <span id="totalPrice" class="text-sals-primary">0 ر.س</span>
+                        </div>
+                        <div id="discountAmount" class="text-green-600 text-sm mt-1 hidden">
+                            خصم: -<span id="discountValue">0</span> ر.س
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button type="submit" class="w-full bg-sals-primary text-white py-4 rounded-lg font-bold text-lg hover:bg-blue-700 transition-colors">
+                        تأكيد الطلب
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div id="successModal" class="modal">
+        <div class="bg-white rounded-lg max-w-md w-full mx-4 p-6 text-center">
+            <div class="text-green-500 text-6xl mb-4">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <h3 class="text-2xl font-bold text-sals-dark mb-4">تم إرسال طلبك بنجاح!</h3>
+            <p class="text-gray-600 mb-6">سيتم التواصل معك قريباً لتأكيد الطلب وإتمام عملية الدفع</p>
+            
+            <div class="bg-gray-50 p-4 rounded-lg mb-6">
+                <p class="text-sm text-gray-600 mb-2">رابط بوابة العميل الخاصة بك:</p>
+                <div class="flex items-center gap-2">
+                    <input type="text" id="clientPortalLink" readonly class="flex-1 p-2 bg-white border rounded text-sm">
+                    <button onclick="copyPortalLink()" class="bg-sals-primary text-white px-3 py-2 rounded text-sm hover:bg-blue-700 transition-colors">
+                        نسخ
+                    </button>
+                </div>
+            </div>
+            
+            <div class="flex gap-3">
+                <button onclick="shareViaWhatsApp()" class="flex-1 bg-green-500 text-white py-3 rounded-lg font-bold hover:bg-green-600 transition-colors">
+                    <i class="fab fa-whatsapp ml-2"></i>
+                    مشاركة عبر واتساب
+                </button>
+                <button onclick="closeSuccessModal()" class="flex-1 bg-gray-500 text-white py-3 rounded-lg font-bold hover:bg-gray-600 transition-colors">
+                    إغلاق
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/firebase-config.js"></script>
+    <script src="js/main.js"></script>
+    
+    <script>
+    // Inline JavaScript to ensure buttons work
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Inline script loaded');
+        
+        // Global variables
+        let currentPackage = null;
+        let basePrice = 0;
+        let discountPercentage = 0;
+        let currentOrderId = null;
+
+        // Package data
+        const packages = {
+            'basic': { name: 'الباقة الأساسية', price: 159, features: ['كتابة سيرة ذاتية احترافية', 'تحسين للتوافق مع ATS', 'مراجعة واحدة مجانية'] },
+            'premium': { name: 'الباقة المتقدمة', price: 279, features: ['كل ما في الباقة الأساسية', 'تحسين ملف LinkedIn', 'مراجعتان مجانيتان'] },
+            'vip': { name: 'باقة VIP المتكاملة', price: 399, features: ['كل ما في الباقة المتقدمة', 'خطاب تغطية مخصص', 'محاكاة مقابلة شخصية', 'متابعة لمدة شهر', 'مراجعات غير محدودة'] },
+            'cv-improvement': { name: 'تحسين السيرة الذاتية', price: 239, features: ['تحليل شامل للسيرة الحالية', 'إعادة كتابة احترافية', 'تحسين للتوافق مع ATS', 'مراجعتان مجانيتان'] },
+            'linkedin-junior': { name: 'ملف LinkedIn - مبتدئ', price: 120, features: ['إنشاء أو تحسين ملف LinkedIn', 'تحسين الكلمات المفتاحية', 'نصائح للبحث عن وظائف'] },
+            'linkedin-mid': { name: 'ملف LinkedIn - متوسط', price: 200, features: ['كل ما في باقة المبتدئ', 'صياغة ملخص احترافي', 'تحسين قسم الخبرات والإنجازات'] },
+            'linkedin-senior': { name: 'ملف LinkedIn - خبير', price: 280, features: ['كل ما في باقة المتوسط', 'استراتيجية بناء الشبكة', 'تحسين الظهور كقائد فكر'] }
+        };
+
+        // Discount codes
+        const discountCodes = { 'WELCOME20': 20, 'STUDENT15': 15, 'FIRST10': 10, 'VIP25': 25 };
+
+        // Smooth scrolling functions
+        window.scrollToServices = function() {
+            const servicesSection = document.getElementById('services');
+            if (servicesSection) {
+                servicesSection.scrollIntoView({ behavior: 'smooth' });
+            }
+        };
+
+        window.scrollToCVAnalysis = function() {
+            const cvSection = document.getElementById('cv-analysis');
+            if (cvSection) {
+                cvSection.scrollIntoView({ behavior: 'smooth' });
+            }
+        };
+
+        // Order Modal functionality
+        window.showOrderModal = function(packageType) {
+            console.log('Showing order modal for package:', packageType);
+            currentPackage = packageType;
+            const modal = document.getElementById('orderModal');
+            const selectedPackageDiv = document.getElementById('selectedPackage');
+            
+            if (!modal) {
+                console.error('Order modal not found');
+                return;
+            }
+            
+            const pkg = packages[packageType];
+            if (!pkg) {
+                console.error('Package not found:', packageType);
+                return;
+            }
+            
+            basePrice = pkg.price;
+            
+            if (selectedPackageDiv) {
+                selectedPackageDiv.innerHTML = `
+                    <h5 class="font-bold text-sals-primary text-lg mb-2">${pkg.name}</h5>
+                    <p class="text-2xl font-bold text-sals-dark mb-3">${pkg.price} ر.س</p>
+                    <ul class="space-y-1">
+                        ${pkg.features.map(feature => `<li class="flex items-center text-sm"><i class="fas fa-check text-green-500 ml-2"></i><span>${feature}</span></li>`).join('')}
+                    </ul>
+                `;
+            }
+            
+            updateTotalPrice();
+            modal.classList.add('show');
+        };
+
+        window.closeOrderModal = function() {
+            const modal = document.getElementById('orderModal');
+            if (modal) {
+                modal.classList.remove('show');
+            }
+            resetOrderForm();
+        };
+
+        function resetOrderForm() {
+            const form = document.getElementById('orderForm');
+            if (form) form.reset();
+            
+            const coverLetter = document.getElementById('coverLetter');
+            const interviewPrep = document.getElementById('interviewPrep');
+            const discountCode = document.getElementById('discountCode');
+            const discountMessage = document.getElementById('discountMessage');
+            const discountAmount = document.getElementById('discountAmount');
+            
+            if (coverLetter) coverLetter.checked = false;
+            if (interviewPrep) interviewPrep.checked = false;
+            if (discountCode) discountCode.value = '';
+            if (discountMessage) discountMessage.innerHTML = '';
+            if (discountAmount) discountAmount.classList.add('hidden');
+            
+            discountPercentage = 0;
+            updateTotalPrice();
+        }
+
+        function updateTotalPrice() {
+            let total = basePrice;
+            
+            const coverLetter = document.getElementById('coverLetter');
+            const interviewPrep = document.getElementById('interviewPrep');
+            
+            if (coverLetter && coverLetter.checked) total += 79;
+            if (interviewPrep && interviewPrep.checked) total += 149;
+            
+            const discountAmount = Math.round(total * (discountPercentage / 100));
+            const finalTotal = total - discountAmount;
+            
+            const totalPriceElement = document.getElementById('totalPrice');
+            if (totalPriceElement) {
+                totalPriceElement.textContent = `${finalTotal} ر.س`;
+            }
+            
+            const discountAmountDiv = document.getElementById('discountAmount');
+            const discountValueElement = document.getElementById('discountValue');
+            
+            if (discountPercentage > 0) {
+                if (discountAmountDiv) discountAmountDiv.classList.remove('hidden');
+                if (discountValueElement) discountValueElement.textContent = discountAmount;
+            } else {
+                if (discountAmountDiv) discountAmountDiv.classList.add('hidden');
+            }
+        }
+
+        window.applyDiscount = function() {
+            const discountCodeInput = document.getElementById('discountCode');
+            const messageDiv = document.getElementById('discountMessage');
+            
+            if (!discountCodeInput || !messageDiv) return;
+            
+            const code = discountCodeInput.value.trim().toUpperCase();
+            
+            if (discountCodes[code]) {
+                discountPercentage = discountCodes[code];
+                messageDiv.innerHTML = `<span class="text-green-600">تم تطبيق الخصم بنجاح! خصم ${discountPercentage}%</span>`;
+                updateTotalPrice();
+            } else if (code === '') {
+                messageDiv.innerHTML = '<span class="text-red-600">يرجى إدخال كود الخصم</span>';
+            } else {
+                messageDiv.innerHTML = '<span class="text-red-600">كود الخصم غير صحيح</span>';
+                discountPercentage = 0;
+                updateTotalPrice();
+            }
+        };
+
+        // Initialize form
+        const form = document.getElementById('orderForm');
+        if (form) {
+            form.addEventListener('submit', async function(event) {
+                event.preventDefault();
+                console.log('Submitting order...');
+                
+                const formData = {
+                    package: currentPackage,
+                    packageName: packages[currentPackage].name,
+                    basePrice: basePrice,
+                    upsellServices: {
+                        coverLetter: document.getElementById('coverLetter')?.checked || false,
+                        interviewPrep: document.getElementById('interviewPrep')?.checked || false
+                    },
+                    personalInfo: {
+                        fullName: document.getElementById('fullName')?.value || '',
+                        phone: document.getElementById('phone')?.value || '',
+                        email: document.getElementById('email')?.value || ''
+                    },
+                    goals: {
+                        dreamCompanies: document.getElementById('dreamCompanies')?.value || '',
+                        achievements: document.getElementById('achievements')?.value || '',
+                        targetPosition: document.getElementById('targetPosition')?.value || ''
+                    },
+                    discountCode: document.getElementById('discountCode')?.value || '',
+                    discountPercentage: discountPercentage,
+                    totalPrice: parseInt(document.getElementById('totalPrice')?.textContent.replace(' ر.س', '') || '0'),
+                    status: 'جديد',
+                    createdAt: new Date().toISOString(),
+                    assignedTo: '',
+                    internalNotes: ''
+                };
+
+                try {
+                    const response = await fetch('https://5000-ihu2eqlqjp7vakccehu8k-16b15953.manusvm.computer/api/orders', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(formData)
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const result = await response.json();
+                    currentOrderId = result.id;
+                    
+                    console.log('Order submitted successfully:', result);
+                    showSuccessModal();
+                    closeOrderModal();
+                    
+                } catch (error) {
+                    console.error('Error saving order:', error);
+                    alert('حدث خطأ في إرسال الطلب. يرجى المحاولة مرة أخرى.');
+                }
+            });
+        }
+
+        // Add event listeners for upselling checkboxes
+        const coverLetter = document.getElementById('coverLetter');
+        const interviewPrep = document.getElementById('interviewPrep');
+        
+        if (coverLetter) coverLetter.addEventListener('change', updateTotalPrice);
+        if (interviewPrep) interviewPrep.addEventListener('change', updateTotalPrice);
+
+        window.showSuccessModal = function() {
+            const modal = document.getElementById('successModal');
+            const portalLinkInput = document.getElementById('clientPortalLink');
+            
+            if (modal && portalLinkInput && currentOrderId) {
+                const portalLink = `${window.location.origin}/order.html?id=${currentOrderId}`;
+                portalLinkInput.value = portalLink;
+                modal.classList.add('show');
+            }
+        };
+
+        window.closeSuccessModal = function() {
+            const modal = document.getElementById('successModal');
+            if (modal) modal.classList.remove('show');
+        };
+
+        window.copyPortalLink = function() {
+            const linkInput = document.getElementById('clientPortalLink');
+            if (linkInput) {
+                linkInput.select();
+                document.execCommand('copy');
+                
+                const button = event.target;
+                const originalText = button.textContent;
+                button.textContent = 'تم النسخ!';
+                button.classList.add('bg-green-500');
+                button.classList.remove('bg-sals-primary');
+                
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.classList.remove('bg-green-500');
+                    button.classList.add('bg-sals-primary');
+                }, 2000);
+            }
+        };
+
+        window.shareViaWhatsApp = function() {
+            const portalLinkInput = document.getElementById('clientPortalLink');
+            if (portalLinkInput) {
+                const portalLink = portalLinkInput.value;
+                const message = `مرحباً، تم إرسال طلبي بنجاح في منصة سلس. رابط بوابة العميل: ${portalLink}`;
+                const whatsappUrl = `https://wa.me/966503678789?text=${encodeURIComponent(message)}`;
+                window.open(whatsappUrl, '_blank');
+            }
+        };
+
+        // CV Upload functionality
+        const uploadArea = document.getElementById('cv-upload-area');
+        const fileInput = document.getElementById('cv-file-input');
+
+        if (uploadArea && fileInput) {
+            uploadArea.addEventListener('click', () => fileInput.click());
+            
+            fileInput.addEventListener('change', function(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const allowedTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+                if (!allowedTypes.includes(file.type)) {
+                    alert('يرجى رفع ملف PDF أو DOCX فقط');
+                    return;
+                }
+
+                uploadArea.innerHTML = `
+                    <i class="fas fa-spinner fa-spin text-4xl text-sals-secondary mb-4"></i>
+                    <h3 class="text-xl font-bold text-sals-dark mb-2">جاري تحليل السيرة الذاتية...</h3>
+                    <p class="text-gray-600">يرجى الانتظار قليلاً</p>
+                `;
+
+                setTimeout(() => {
+                    const scores = [75, 80, 85, 90, 95];
+                    const score = scores[Math.floor(Math.random() * scores.length)];
+                    
+                    const scoreElement = document.getElementById('cv-score');
+                    if (scoreElement) scoreElement.textContent = score;
+                    
+                    const resultDiv = document.getElementById('cv-analysis-result');
+                    if (resultDiv) resultDiv.classList.remove('hidden');
+                }, 3000);
+            });
+
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragover');
+            });
+
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    fileInput.files = files;
+                    fileInput.dispatchEvent(new Event('change'));
+                }
+            });
+        }
+
+        console.log('All functions initialized successfully');
+    });
+    </script>
+</body>
+</html>
+
