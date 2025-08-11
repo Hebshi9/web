@@ -7,10 +7,31 @@ from datetime import datetime
 import threading
 import time
 
+from flask import send_from_directory
+
 app = Flask(__name__)
 CORS(app) # Enable CORS for all routes
 
-DB_FILE = os.path.join(os.path.dirname(__file__), 'db.json')
+ROOT_DIR = os.path.dirname(__file__)
+DB_FILE = os.path.join(ROOT_DIR, 'db.json')
+
+# Serve frontend files
+@app.route('/')
+def serve_index():
+    return send_from_directory(ROOT_DIR, 'index.html')
+
+@app.route('/admin.html')
+def serve_admin():
+    return send_from_directory(ROOT_DIR, 'admin.html')
+
+@app.route('/order.html')
+def serve_order():
+    return send_from_directory(ROOT_DIR, 'order.html')
+
+@app.route('/js/<path:filename>')
+def serve_js(filename):
+    return send_from_directory(os.path.join(ROOT_DIR, 'js'), filename)
+
 
 db_lock = threading.Lock()
 
@@ -18,9 +39,22 @@ def read_db():
     with db_lock:
         if not os.path.exists(DB_FILE):
             with open(DB_FILE, 'w') as f:
-                json.dump({"orders": [], "customers": [], "last_order_sequence": 0}, f)
+                json.dump({
+                    "orders": [],
+                    "customers": [],
+                    "team": [],
+                    "discounts": [],
+                    "last_order_sequence": 0
+                }, f)
         with open(DB_FILE, 'r') as f:
-            return json.load(f)
+            data = json.load(f)
+        # Ensure required keys exist
+        data.setdefault('orders', [])
+        data.setdefault('customers', [])
+        data.setdefault('team', [])
+        data.setdefault('discounts', [])
+        data.setdefault('last_order_sequence', 0)
+        return data
 
 def write_db(data):
     with db_lock:
@@ -78,18 +112,187 @@ def get_all_orders():
     db_data = read_db()
     return jsonify({'orders': db_data['orders']}), 200
 
+# New: update order
+@app.route('/api/orders/<order_id>', methods=['PUT'])
+def update_order(order_id):
+    update_fields = request.json or {}
+    db_data = read_db()
+
+    for order in db_data['orders']:
+        if order['id'] == order_id:
+            # Only allow specific fields to be updated
+            allowed_fields = {'status', 'assignedTo', 'internalNotes', 'package', 'packageName', 'basePrice', 'discountCode', 'discountPercentage', 'totalPrice'}
+            for key, value in update_fields.items():
+                if key in allowed_fields:
+                    order[key] = value
+            order['updatedAt'] = datetime.now().isoformat()
+            write_db(db_data)
+            return jsonify({'success': True, 'order': order})
+
+    return jsonify({'success': False, 'message': 'Order not found'}), 404
+
+# New: delete order
+@app.route('/api/orders/<order_id>', methods=['DELETE'])
+def delete_order(order_id):
+    db_data = read_db()
+
+    # Remove from orders
+    original_len = len(db_data['orders'])
+    db_data['orders'] = [o for o in db_data['orders'] if o.get('id') != order_id]
+
+    # Remove from customers' order lists
+    for customer in db_data['customers']:
+        if 'orders' in customer and isinstance(customer['orders'], list):
+            customer['orders'] = [oid for oid in customer['orders'] if oid != order_id]
+
+    if len(db_data['orders']) == original_len:
+        return jsonify({'success': False, 'message': 'Order not found'}), 404
+
+    write_db(db_data)
+    return jsonify({'success': True})
+
 @app.route('/api/customers', methods=['GET'])
 def get_all_customers():
     db_data = read_db()
     return jsonify(db_data['customers']), 200
 
-import openai
-import os
-from werkzeug.utils import secure_filename
+# New: Team CRUD
+@app.route('/api/team', methods=['GET'])
+def get_team():
+    db_data = read_db()
+    return jsonify(db_data['team'])
 
-# Configure OpenAI
-openai.api_key = os.getenv('OPENAI_API_KEY')
-openai.api_base = os.getenv('OPENAI_API_BASE')
+@app.route('/api/team', methods=['POST'])
+def create_team_member():
+    db_data = read_db()
+    data = request.json or {}
+    member_id = data.get('id') or f"member_{uuid.uuid4().hex[:8]}"
+    member = {
+        'id': member_id,
+        'name': data.get('name', ''),
+        'email': data.get('email', ''),
+        'position': data.get('position', ''),
+        'status': data.get('status', 'نشط')
+    }
+    db_data['team'].append(member)
+    write_db(db_data)
+    return jsonify({'success': True, 'member': member}), 201
+
+@app.route('/api/team/<member_id>', methods=['PUT'])
+def update_team_member(member_id):
+    db_data = read_db()
+    data = request.json or {}
+    for member in db_data['team']:
+        if member['id'] == member_id:
+            for key in ['name', 'email', 'position', 'status']:
+                if key in data:
+                    member[key] = data[key]
+            write_db(db_data)
+            return jsonify({'success': True, 'member': member})
+    return jsonify({'success': False, 'message': 'Member not found'}), 404
+
+@app.route('/api/team/<member_id>', methods=['DELETE'])
+def delete_team_member(member_id):
+    db_data = read_db()
+    original_len = len(db_data['team'])
+    db_data['team'] = [m for m in db_data['team'] if m.get('id') != member_id]
+    if len(db_data['team']) == original_len:
+        return jsonify({'success': False, 'message': 'Member not found'}), 404
+    write_db(db_data)
+    return jsonify({'success': True})
+
+# New: Discounts CRUD
+@app.route('/api/discounts', methods=['GET'])
+def get_discounts():
+    db_data = read_db()
+    return jsonify(db_data['discounts'])
+
+@app.route('/api/discounts', methods=['POST'])
+def create_discount():
+    db_data = read_db()
+    data = request.json or {}
+    code = data.get('code')
+    if not code:
+        return jsonify({'success': False, 'message': 'code is required'}), 400
+    discount = {
+        'id': data.get('id', code),
+        'code': code,
+        'percentage': int(data.get('percentage', 0)),
+        'usageCount': int(data.get('usageCount', 0)),
+        'expiryDate': data.get('expiryDate', ''),
+        'status': data.get('status', 'نشط')
+    }
+    # Prevent duplicate codes
+    if any(d.get('code') == code for d in db_data['discounts']):
+        return jsonify({'success': False, 'message': 'code already exists'}), 409
+    db_data['discounts'].append(discount)
+    write_db(db_data)
+    return jsonify({'success': True, 'discount': discount}), 201
+
+@app.route('/api/discounts/<discount_id>', methods=['PUT'])
+def update_discount(discount_id):
+    db_data = read_db()
+    data = request.json or {}
+    for d in db_data['discounts']:
+        if d['id'] == discount_id or d['code'] == discount_id:
+            for key in ['code', 'percentage', 'usageCount', 'expiryDate', 'status']:
+                if key in data:
+                    d[key] = data[key]
+            write_db(db_data)
+            return jsonify({'success': True, 'discount': d})
+    return jsonify({'success': False, 'message': 'Discount not found'}), 404
+
+@app.route('/api/discounts/<discount_id>', methods=['DELETE'])
+def delete_discount(discount_id):
+    db_data = read_db()
+    original_len = len(db_data['discounts'])
+    db_data['discounts'] = [d for d in db_data['discounts'] if d.get('id') != discount_id and d.get('code') != discount_id]
+    if len(db_data['discounts']) == original_len:
+        return jsonify({'success': False, 'message': 'Discount not found'}), 404
+    write_db(db_data)
+    return jsonify({'success': True})
+
+# Optional: Stats endpoint
+@app.route('/api/stats', methods=['GET'])
+def get_stats():
+    db_data = read_db()
+    orders = db_data['orders']
+    total_orders = len(orders)
+    total_revenue = sum(int(o.get('totalPrice', 0)) for o in orders)
+    pending_orders = sum(1 for o in orders if o.get('status') in ['جديد', 'قيد التنفيذ'])
+
+    # Revenue by month (YYYY-MM)
+    revenue_by_month = {}
+    for o in orders:
+        created_at = o.get('createdAt')
+        try:
+            dt = datetime.fromisoformat(created_at) if created_at else None
+        except Exception:
+            dt = None
+        key = dt.strftime('%Y-%m') if dt else 'unknown'
+        revenue_by_month[key] = revenue_by_month.get(key, 0) + int(o.get('totalPrice', 0))
+
+    return jsonify({
+        'total_orders': total_orders,
+        'total_revenue': total_revenue,
+        'pending_orders': pending_orders,
+        'revenue_by_month': revenue_by_month
+    })
+
+try:
+    import openai
+    # Configure OpenAI (optional)
+    openai.api_key = os.getenv('OPENAI_API_KEY')
+    openai.api_base = os.getenv('OPENAI_API_BASE')
+except Exception:
+    openai = None
+
+import requests
+import uuid
+
+# STCPay configuration (using Tap API)
+TAP_API_KEY = "sk_test_XKokBfNWv6FIYuTMg5sLPjhJ"  # Test key from documentation
+TAP_BASE_URL = "https://api.tap.company/v2"
 
 @app.route('/api/analyze-cv', methods=['POST'])
 def analyze_cv():
@@ -268,13 +471,6 @@ def analyze_cv():
     except Exception as e:
         print(f"CV analysis error: {e}")
         return jsonify({'success': False, 'message': 'حدث خطأ أثناء تحليل السيرة الذاتية'}), 500
-
-import requests
-import uuid
-
-# STCPay configuration (using Tap API)
-TAP_API_KEY = "sk_test_XKokBfNWv6FIYuTMg5sLPjhJ"  # Test key from documentation
-TAP_BASE_URL = "https://api.tap.company/v2"
 
 @app.route('/api/create-stcpay-payment', methods=['POST'])
 def create_stcpay_payment():
