@@ -421,8 +421,8 @@ async function handleOrderSubmit(event) {
 
         console.log("Order submitted to Firestore:", { id: currentOrderId });
         
-        // Show payment options modal (uses currentOrderId)
-        showPaymentModal(currentOrderId, formData.totalPrice, formData);
+        // Show success modal with order link
+        showSuccessModal();
         closeOrderModal();
         
     } catch (error) {
