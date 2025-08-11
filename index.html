@@ -629,22 +629,10 @@
         </div>
     </div>
 
+    <script src="js/config.js"></script>
     <script src="js/firebase-config.js"></script>
     <script src="js/main.js"></script>
     
-    <script>
-    // Inline JavaScript to ensure buttons work
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log('Inline script loaded');
-        
-        // Global variables
-        let currentPackage = null;
-        let basePrice = 0;
-        let discountPercentage = 0;
-        let currentOrderId = null;
-
-        // Package data
-        const packages = {
             'basic': { name: 'الباقة الأساسية', price: 159, features: ['كتابة سيرة ذاتية احترافية', 'تحسين للتوافق مع ATS', 'مراجعة واحدة مجانية'] },
             'premium': { name: 'الباقة المتقدمة', price: 279, features: ['كل ما في الباقة الأساسية', 'تحسين ملف LinkedIn', 'مراجعتان مجانيتان'] },
             'vip': { name: 'باقة VIP المتكاملة', price: 399, features: ['كل ما في الباقة المتقدمة', 'خطاب تغطية مخصص', 'محاكاة مقابلة شخصية', 'متابعة لمدة شهر', 'مراجعات غير محدودة'] },

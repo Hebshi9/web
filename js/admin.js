@@ -102,12 +102,12 @@ function showSection(sectionName) {
 async function loadDashboardData() {
     try {
         // Load orders
-        const ordersResponse = await fetch('https://5000-is20x6ners704x6gl1at6-16b15953.manusvm.computer/api/orders');
+        const ordersResponse = await fetch(`${API_BASE}/api/orders`);
         const ordersData = await ordersResponse.json();
         allOrders = ordersData.orders || [];
         
         // Load customers
-        const customersResponse = await fetch('https://5000-is20x6ners704x6gl1at6-16b15953.manusvm.computer/api/customers');
+        const customersResponse = await fetch(`${API_BASE}/api/customers`);
         allCustomers = await customersResponse.json();
         
         // Initialize empty arrays for team and discounts (can be expanded later)
