@@ -166,7 +166,7 @@ function handleFileUpload(event) {
     formData.append('cv_file', file);
 
     // Send to backend for analysis
-    fetch('https://5000-is20x6ners704x6gl1at6-16b15953.manusvm.computer/api/analyze-cv', {
+    fetch(`${API_BASE}/api/analyze-cv`, {
         method: 'POST',
         body: formData
     })
@@ -411,26 +411,18 @@ async function handleOrderSubmit(event) {
     };
 
     try {
-        const response = await fetch('https://5000-is20x6ners704x6gl1at6-16b15953.manusvm.computer/api/orders', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(formData)
-        });
-        
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+        if (!window.db) {
+            throw new Error('لم يتم تهيئة قاعدة البيانات');
         }
+
+        // Create order in Firestore
+        const orderRef = await window.db.collection('orders').add(formData);
+        currentOrderId = orderRef.id;
+
+        console.log("Order submitted to Firestore:", { id: currentOrderId });
         
-        const result = await response.json();
-        currentOrderId = result.id; // Use 'id' from backend response
-        
-        console.log("Order submitted successfully:", result);
-        
-        // Show payment options modal
-        showPaymentModal(currentOrderId, formData.totalPrice, formData);
+        // Show success modal with order link
+        showSuccessModal();
         closeOrderModal();
         
     } catch (error) {
@@ -484,7 +476,7 @@ function initiateSTCPayPayment(orderId, amount, orderDataStr) {
     stcPayBtn.disabled = true;
     
     // Create STCPay payment
-    fetch('https://5000-is20x6ners704x6gl1at6-16b15953.manusvm.computer/api/create-stcpay-payment', {
+    fetch(`${API_BASE}/api/create-stcpay-payment`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -570,7 +562,7 @@ function verifySTCPayOTP(chargeId, orderId) {
     verifyBtn.disabled = true;
     
     // Verify OTP
-    fetch('https://5000-is20x6ners704x6gl1at6-16b15953.manusvm.computer/api/verify-stcpay-otp', {
+    fetch(`${API_BASE}/api/verify-stcpay-otp`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'

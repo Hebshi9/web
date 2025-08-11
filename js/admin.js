@@ -101,18 +101,20 @@ function showSection(sectionName) {
 // Load dashboard data
 async function loadDashboardData() {
     try {
-        // Load orders
-        const ordersResponse = await fetch('https://5000-is20x6ners704x6gl1at6-16b15953.manusvm.computer/api/orders');
-        const ordersData = await ordersResponse.json();
-        allOrders = ordersData.orders || [];
+        if (!window.db) {
+            throw new Error('لم يتم تهيئة قاعدة البيانات');
+        }
+        // Load orders from Firestore
+        const snapshot = await window.db.collection('orders').orderBy('createdAt', 'asc').get();
+        allOrders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         
-        // Load customers
-        const customersResponse = await fetch('https://5000-is20x6ners704x6gl1at6-16b15953.manusvm.computer/api/customers');
-        allCustomers = await customersResponse.json();
-        
-        // Initialize empty arrays for team and discounts (can be expanded later)
-        teamMembers = [];
-        discountCodes = [];
+        // Customers are derived from orders for now
+        allCustomers = Array.from(new Map(allOrders.map(o => [o.personalInfo?.email, {
+            fullName: o.personalInfo?.fullName,
+            email: o.personalInfo?.email,
+            phone: o.personalInfo?.phone,
+            orders: []
+        }])).values());
         
         console.log('Dashboard data loaded:', { orders: allOrders.length, customers: allCustomers.length });
     } catch (error) {
@@ -368,7 +370,7 @@ async function updateOrder(orderId) {
     const internalNotes = document.getElementById('orderNotes').value;
     
     try {
-        await db.collection('orders').doc(orderId).update({
+        await window.db.collection('orders').doc(orderId).update({
             status: status,
             assignedTo: assignedTo,
             internalNotes: internalNotes,
@@ -397,7 +399,7 @@ async function deleteOrder(orderId) {
     if (!confirm('هل أنت متأكد من حذف هذا الطلب؟')) return;
     
     try {
-        await db.collection('orders').doc(orderId).delete();
+        await window.db.collection('orders').doc(orderId).delete();
         allOrders = allOrders.filter(o => o.id !== orderId);
         displayOrders(allOrders);
         alert('تم حذف الطلب بنجاح');
@@ -483,7 +485,7 @@ function loadTeamData() {
         // Save to Firebase
         defaultMembers.forEach(async (member) => {
             try {
-                await db.collection('team').doc(member.id).set(member);
+                await window.db.collection('team').doc(member.id).set(member);
             } catch (error) {
                 console.error('Error adding team member:', error);
             }
@@ -547,7 +549,7 @@ function loadDiscountsData() {
         // Save to Firebase
         defaultDiscounts.forEach(async (discount) => {
             try {
-                await db.collection('discounts').doc(discount.id).set(discount);
+                await window.db.collection('discounts').doc(discount.id).set(discount);
             } catch (error) {
                 console.error('Error adding discount:', error);
             }
