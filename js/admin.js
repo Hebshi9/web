@@ -12,6 +12,8 @@ let allCustomers = [];
 let teamMembers = [];
 let discountCodes = [];
 
+const API_BASE = '';
+
 // Initialize admin panel
 document.addEventListener('DOMContentLoaded', function() {
     initializeLogin();
@@ -37,8 +39,9 @@ function handleLogin(event) {
         document.getElementById('dashboard').classList.remove('hidden');
         
         // Load initial data
-        loadDashboardData();
-        showSection('overview');
+        loadDashboardData().then(() => {
+            showSection('overview');
+        });
     } else {
         errorDiv.textContent = 'اسم المستخدم أو كلمة المرور غير صحيحة';
         errorDiv.classList.remove('hidden');
@@ -67,13 +70,16 @@ function showSection(sectionName) {
     });
     
     // Show selected section
-    document.getElementById(sectionName + '-section').classList.remove('hidden');
+    const sectionEl = document.getElementById(sectionName + '-section');
+    if (sectionEl) sectionEl.classList.remove('hidden');
     
     // Update active nav item
     document.querySelectorAll('.nav-item').forEach(item => {
         item.classList.remove('bg-sals-primary', 'text-white');
     });
-    event.target.classList.add('bg-sals-primary', 'text-white');
+    if (event && event.target) {
+        event.target.classList.add('bg-sals-primary', 'text-white');
+    }
     
     // Load section-specific data
     switch(sectionName) {
@@ -102,19 +108,23 @@ function showSection(sectionName) {
 async function loadDashboardData() {
     try {
         // Load orders
-        const ordersResponse = await fetch('https://5000-is20x6ners704x6gl1at6-16b15953.manusvm.computer/api/orders');
+        const ordersResponse = await fetch(`${API_BASE}/api/orders`);
         const ordersData = await ordersResponse.json();
         allOrders = ordersData.orders || [];
         
         // Load customers
-        const customersResponse = await fetch('https://5000-is20x6ners704x6gl1at6-16b15953.manusvm.computer/api/customers');
+        const customersResponse = await fetch(`${API_BASE}/api/customers`);
         allCustomers = await customersResponse.json();
         
-        // Initialize empty arrays for team and discounts (can be expanded later)
-        teamMembers = [];
-        discountCodes = [];
+        // Load team
+        const teamResponse = await fetch(`${API_BASE}/api/team`);
+        teamMembers = await teamResponse.json();
         
-        console.log('Dashboard data loaded:', { orders: allOrders.length, customers: allCustomers.length });
+        // Load discounts
+        const discountsResponse = await fetch(`${API_BASE}/api/discounts`);
+        discountCodes = await discountsResponse.json();
+        
+        console.log('Dashboard data loaded:', { orders: allOrders.length, customers: allCustomers.length, team: teamMembers.length, discounts: discountCodes.length });
     } catch (error) {
         console.error('Error loading dashboard data:', error);
         alert('حدث خطأ في تحميل البيانات');
@@ -125,9 +135,9 @@ async function loadDashboardData() {
 function loadOverviewData() {
     // Calculate stats
     const totalOrders = allOrders.length;
-    const totalRevenue = allOrders.reduce((sum, order) => sum + (order.totalPrice || 0), 0);
+    const totalRevenue = allOrders.reduce((sum, order) => sum + (Number(order.totalPrice) || 0), 0);
     const totalCustomers = allCustomers.length;
-    const pendingOrders = allOrders.filter(order => order.status === 'قيد التنفيذ').length;
+    const pendingOrders = allOrders.filter(order => order.status === 'قيد التنفيذ' || order.status === 'جديد').length;
     
     // Update stats cards
     document.getElementById('totalOrders').textContent = totalOrders;
@@ -137,8 +147,8 @@ function loadOverviewData() {
     
     // Load recent orders
     const recentOrders = allOrders
-        .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
-        .slice(0, 5);
+        .slice(-5)
+        .reverse();
     
     const recentOrdersList = document.getElementById('recentOrdersList');
     recentOrdersList.innerHTML = '';
@@ -196,15 +206,15 @@ function displayOrders(orders) {
         const row = document.createElement('tr');
         row.className = 'hover:bg-gray-50';
         
-        const createdDate = order.createdAt?.toDate ? 
-            order.createdAt.toDate().toLocaleDateString('ar-SA') : 
+        const createdDate = order.createdAt ?
+            new Date(order.createdAt).toLocaleDateString('ar-SA') : 
             'غير محدد';
         
         const assignedMember = teamMembers.find(member => member.id === order.assignedTo);
         
         row.innerHTML = `
             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                ${order.id.substring(0, 8)}...
+                ${order.id ? order.id.substring(0, 8) + '...' : 'غير محدد'}
             </td>
             <td class="px-6 py-4 whitespace-nowrap">
                 <div>
@@ -278,8 +288,8 @@ function viewOrderDetails(orderId) {
     const content = document.getElementById('orderDetailsContent');
     
     const assignedMember = teamMembers.find(member => member.id === order.assignedTo);
-    const createdDate = order.createdAt?.toDate ? 
-        order.createdAt.toDate().toLocaleString('ar-SA') : 
+    const createdDate = order.createdAt ?
+        new Date(order.createdAt).toLocaleString('ar-SA') : 
         'غير محدد';
     
     content.innerHTML = `
@@ -368,19 +378,18 @@ async function updateOrder(orderId) {
     const internalNotes = document.getElementById('orderNotes').value;
     
     try {
-        await db.collection('orders').doc(orderId).update({
-            status: status,
-            assignedTo: assignedTo,
-            internalNotes: internalNotes,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        const resp = await fetch(`${API_BASE}/api/orders/${orderId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status, assignedTo, internalNotes })
         });
+        if (!resp.ok) throw new Error('Failed to update');
+        const { order } = await resp.json();
         
         // Update local data
         const orderIndex = allOrders.findIndex(o => o.id === orderId);
         if (orderIndex !== -1) {
-            allOrders[orderIndex].status = status;
-            allOrders[orderIndex].assignedTo = assignedTo;
-            allOrders[orderIndex].internalNotes = internalNotes;
+            allOrders[orderIndex] = { ...allOrders[orderIndex], ...order };
         }
         
         alert('تم تحديث الطلب بنجاح');
@@ -397,7 +406,8 @@ async function deleteOrder(orderId) {
     if (!confirm('هل أنت متأكد من حذف هذا الطلب؟')) return;
     
     try {
-        await db.collection('orders').doc(orderId).delete();
+        const resp = await fetch(`${API_BASE}/api/orders/${orderId}`, { method: 'DELETE' });
+        if (!resp.ok) throw new Error('Failed to delete');
         allOrders = allOrders.filter(o => o.id !== orderId);
         displayOrders(allOrders);
         alert('تم حذف الطلب بنجاح');
@@ -422,8 +432,8 @@ function loadCustomersData() {
         row.className = 'hover:bg-gray-50';
         
         const orderCount = customer.orders?.length || 0;
-        const lastOrderDate = customer.lastOrderDate?.toDate ? 
-            customer.lastOrderDate.toDate().toLocaleDateString('ar-SA') : 
+        const lastOrderDate = customer.lastOrderDate ? 
+            new Date(customer.lastOrderDate).toLocaleDateString('ar-SA') : 
             'غير محدد';
         
         row.innerHTML = `
@@ -443,7 +453,7 @@ function loadCustomersData() {
                 ${lastOrderDate}
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                <button onclick="viewCustomerOrders('${customer.id}')" class="text-sals-primary hover:text-blue-700">
+                <button onclick="viewCustomerOrders('${customer.email}')" class="text-sals-primary hover:text-blue-700">
                     <i class="fas fa-eye ml-2"></i>
                     عرض الطلبات
                 </button>
@@ -454,8 +464,8 @@ function loadCustomersData() {
     });
 }
 
-function viewCustomerOrders(customerId) {
-    const customer = allCustomers.find(c => c.id === customerId);
+function viewCustomerOrders(customerEmail) {
+    const customer = allCustomers.find(c => c.email === customerEmail);
     if (!customer || !customer.orders) return;
     
     const customerOrders = allOrders.filter(order => 
@@ -470,26 +480,13 @@ function loadTeamData() {
     const tbody = document.getElementById('teamTableBody');
     tbody.innerHTML = '';
     
-    // Add default team members if none exist
     if (teamMembers.length === 0) {
-        const defaultMembers = [
-            { id: 'member1', name: 'أحمد محمد', email: 'ahmed@sals.sa', position: 'كاتب سير ذاتية', status: 'نشط' },
-            { id: 'member2', name: 'فاطمة العلي', email: 'fatima@sals.sa', position: 'مستشارة مهنية', status: 'نشط' },
-            { id: 'member3', name: 'خالد السعد', email: 'khalid@sals.sa', position: 'مدير المشاريع', status: 'نشط' }
-        ];
-        
-        teamMembers = defaultMembers;
-        
-        // Save to Firebase
-        defaultMembers.forEach(async (member) => {
-            try {
-                await db.collection('team').doc(member.id).set(member);
-            } catch (error) {
-                console.error('Error adding team member:', error);
-            }
-        });
+        const emptyRow = document.createElement('tr');
+        emptyRow.innerHTML = '<td colspan="6" class="text-center py-8 text-gray-500">لا يوجد أعضاء</td>';
+        tbody.appendChild(emptyRow);
+        return;
     }
-    
+
     teamMembers.forEach(member => {
         const row = document.createElement('tr');
         row.className = 'hover:bg-gray-50';
@@ -515,10 +512,10 @@ function loadTeamData() {
                 </span>
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                <button onclick="editTeamMember('${member.id}')" class="text-green-600 hover:text-green-800 ml-3">
+                <button onclick="promptEditTeamMember('${member.id}')" class="text-green-600 hover:text-green-800 ml-3">
                     <i class="fas fa-edit"></i>
                 </button>
-                <button onclick="deleteTeamMember('${member.id}')" class="text-red-600 hover:text-red-800">
+                <button onclick="confirmDeleteTeamMember('${member.id}')" class="text-red-600 hover:text-red-800">
                     <i class="fas fa-trash"></i>
                 </button>
             </td>
@@ -528,30 +525,75 @@ function loadTeamData() {
     });
 }
 
+async function showAddTeamMemberModal() {
+    const name = prompt('اسم العضو:');
+    if (!name) return;
+    const email = prompt('البريد الإلكتروني:') || '';
+    const position = prompt('المنصب:') || '';
+    try {
+        const resp = await fetch(`${API_BASE}/api/team`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, email, position, status: 'نشط' })
+        });
+        if (!resp.ok) throw new Error('create failed');
+        const { member } = await resp.json();
+        teamMembers.push(member);
+        loadTeamData();
+    } catch (e) {
+        alert('فشل إنشاء العضو');
+    }
+}
+
+function promptEditTeamMember(memberId) {
+    const member = teamMembers.find(m => m.id === memberId);
+    if (!member) return;
+    const name = prompt('اسم العضو:', member.name) || member.name;
+    const email = prompt('البريد الإلكتروني:', member.email) || member.email;
+    const position = prompt('المنصب:', member.position) || member.position;
+    const status = prompt('الحالة (نشط/غير نشط):', member.status) || member.status;
+    updateTeamMember(memberId, { name, email, position, status });
+}
+
+async function updateTeamMember(memberId, data) {
+    try {
+        const resp = await fetch(`${API_BASE}/api/team/${memberId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (!resp.ok) throw new Error('update failed');
+        const result = await resp.json();
+        const idx = teamMembers.findIndex(m => m.id === memberId);
+        if (idx !== -1) teamMembers[idx] = result.member;
+        loadTeamData();
+    } catch (e) {
+        alert('فشل تحديث العضو');
+    }
+}
+
+async function confirmDeleteTeamMember(memberId) {
+    if (!confirm('هل أنت متأكد من حذف هذا العضو؟')) return;
+    try {
+        const resp = await fetch(`${API_BASE}/api/team/${memberId}`, { method: 'DELETE' });
+        if (!resp.ok) throw new Error('delete failed');
+        teamMembers = teamMembers.filter(m => m.id !== memberId);
+        loadTeamData();
+    } catch (e) {
+        alert('فشل حذف العضو');
+    }
+}
+
 // Discounts section
 function loadDiscountsData() {
     const tbody = document.getElementById('discountsTableBody');
     tbody.innerHTML = '';
     
-    // Add default discount codes if none exist
     if (discountCodes.length === 0) {
-        const defaultDiscounts = [
-            { id: 'WELCOME20', code: 'WELCOME20', percentage: 20, usageCount: 0, expiryDate: '2024-12-31', status: 'نشط' },
-            { id: 'STUDENT15', code: 'STUDENT15', percentage: 15, usageCount: 0, expiryDate: '2024-12-31', status: 'نشط' },
-            { id: 'FIRST10', code: 'FIRST10', percentage: 10, usageCount: 0, expiryDate: '2024-12-31', status: 'نشط' },
-            { id: 'VIP25', code: 'VIP25', percentage: 25, usageCount: 0, expiryDate: '2024-12-31', status: 'نشط' }
-        ];
-        
-        discountCodes = defaultDiscounts;
-        
-        // Save to Firebase
-        defaultDiscounts.forEach(async (discount) => {
-            try {
-                await db.collection('discounts').doc(discount.id).set(discount);
-            } catch (error) {
-                console.error('Error adding discount:', error);
-            }
-        });
+        const emptyRow = document.createElement('tr');
+        emptyRow.innerHTML = '<td colspan="6" class="text-center py-8 text-gray-500">لا توجد كوبونات</td>';
+        tbody.appendChild(emptyRow);
+        return;
     }
     
     discountCodes.forEach(discount => {
@@ -577,10 +619,10 @@ function loadDiscountsData() {
                 </span>
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                <button onclick="editDiscount('${discount.id}')" class="text-green-600 hover:text-green-800 ml-3">
+                <button onclick="promptEditDiscount('${discount.id}')" class="text-green-600 hover:text-green-800 ml-3">
                     <i class="fas fa-edit"></i>
                 </button>
-                <button onclick="deleteDiscount('${discount.id}')" class="text-red-600 hover:text-red-800">
+                <button onclick="confirmDeleteDiscount('${discount.id}')" class="text-red-600 hover:text-red-800">
                     <i class="fas fa-trash"></i>
                 </button>
             </td>
@@ -590,69 +632,117 @@ function loadDiscountsData() {
     });
 }
 
+async function showAddDiscountModal() {
+    const code = prompt('كود الخصم:');
+    if (!code) return;
+    const percentage = parseInt(prompt('نسبة الخصم (%):') || '0', 10);
+    const expiryDate = prompt('تاريخ الانتهاء (YYYY-MM-DD):') || '';
+    try {
+        const resp = await fetch(`${API_BASE}/api/discounts`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code, percentage, expiryDate, status: 'نشط' })
+        });
+        if (!resp.ok) throw new Error('create failed');
+        const { discount } = await resp.json();
+        discountCodes.push(discount);
+        loadDiscountsData();
+    } catch (e) {
+        alert('فشل إنشاء الكوبون');
+    }
+}
+
+function promptEditDiscount(discountId) {
+    const discount = discountCodes.find(d => d.id === discountId || d.code === discountId);
+    if (!discount) return;
+    const code = prompt('كود الخصم:', discount.code) || discount.code;
+    const percentage = parseInt(prompt('نسبة الخصم (%):', discount.percentage) || discount.percentage, 10);
+    const expiryDate = prompt('تاريخ الانتهاء (YYYY-MM-DD):', discount.expiryDate) || discount.expiryDate;
+    const status = prompt('الحالة (نشط/متوقف):', discount.status) || discount.status;
+    updateDiscount(discountId, { code, percentage, expiryDate, status });
+}
+
+async function updateDiscount(discountId, data) {
+    try {
+        const resp = await fetch(`${API_BASE}/api/discounts/${discountId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (!resp.ok) throw new Error('update failed');
+        const result = await resp.json();
+        const idx = discountCodes.findIndex(d => d.id === discountId || d.code === discountId);
+        if (idx !== -1) discountCodes[idx] = result.discount;
+        loadDiscountsData();
+    } catch (e) {
+        alert('فشل تحديث الكوبون');
+    }
+}
+
+async function confirmDeleteDiscount(discountId) {
+    if (!confirm('هل أنت متأكد من حذف هذا الكوبون؟')) return;
+    try {
+        const resp = await fetch(`${API_BASE}/api/discounts/${discountId}`, { method: 'DELETE' });
+        if (!resp.ok) throw new Error('delete failed');
+        discountCodes = discountCodes.filter(d => d.id !== discountId && d.code !== discountId);
+        loadDiscountsData();
+    } catch (e) {
+        alert('فشل حذف الكوبون');
+    }
+}
+
 // Reports section
-function loadReportsData() {
-    // Revenue Chart
-    const revenueCtx = document.getElementById('revenueChart').getContext('2d');
-    
-    // Generate sample revenue data
-    const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو'];
-    const revenueData = [5000, 7500, 12000, 8500, 15000, 18000];
-    
-    new Chart(revenueCtx, {
-        type: 'line',
-        data: {
-            labels: months,
-            datasets: [{
-                label: 'الإيرادات (ر.س)',
-                data: revenueData,
-                borderColor: '#1e40af',
-                backgroundColor: 'rgba(30, 64, 175, 0.1)',
-                tension: 0.4
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    display: false
-                }
+async function loadReportsData() {
+    try {
+        const resp = await fetch(`${API_BASE}/api/stats`);
+        const stats = await resp.json();
+        
+        // Revenue Chart
+        const revenueCtx = document.getElementById('revenueChart').getContext('2d');
+        const labels = Object.keys(stats.revenue_by_month || {});
+        const revenueData = Object.values(stats.revenue_by_month || {});
+        
+        new Chart(revenueCtx, {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [{
+                    label: 'الإيرادات (ر.س)',
+                    data: revenueData,
+                    borderColor: '#1e40af',
+                    backgroundColor: 'rgba(30, 64, 175, 0.1)',
+                    tension: 0.4
+                }]
             },
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true } }
             }
-        }
-    });
-    
-    // Packages Chart
-    const packagesCtx = document.getElementById('packagesChart').getContext('2d');
-    
-    const packageCounts = {
-        'basic': allOrders.filter(o => o.package === 'basic').length,
-        'premium': allOrders.filter(o => o.package === 'premium').length,
-        'vip': allOrders.filter(o => o.package === 'vip').length
-    };
-    
-    new Chart(packagesCtx, {
-        type: 'doughnut',
-        data: {
-            labels: ['الباقة الأساسية', 'الباقة المتقدمة', 'باقة VIP'],
-            datasets: [{
-                data: [packageCounts.basic, packageCounts.premium, packageCounts.vip],
-                backgroundColor: ['#3b82f6', '#f59e0b', '#10b981']
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    position: 'bottom'
-                }
-            }
-        }
-    });
+        });
+        
+        // Packages Chart
+        const packagesCtx = document.getElementById('packagesChart').getContext('2d');
+        const packageCounts = {
+            'basic': allOrders.filter(o => o.package === 'basic').length,
+            'premium': allOrders.filter(o => o.package === 'premium').length,
+            'vip': allOrders.filter(o => o.package === 'vip').length
+        };
+        
+        new Chart(packagesCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['الباقة الأساسية', 'الباقة المتقدمة', 'باقة VIP'],
+                datasets: [{
+                    data: [packageCounts.basic, packageCounts.premium, packageCounts.vip],
+                    backgroundColor: ['#3b82f6', '#f59e0b', '#10b981']
+                }]
+            },
+            options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+        });
+    } catch (e) {
+        console.error('Failed to load reports', e);
+    }
 }
 
 // Utility functions
@@ -663,35 +753,6 @@ function getStatusClass(status) {
         case 'مكتمل': return 'completed';
         case 'ملغي': return 'cancelled';
         default: return 'new';
-    }
-}
-
-// Placeholder functions for modals and actions
-function showAddTeamMemberModal() {
-    alert('إضافة عضو فريق جديد - سيتم تطوير هذه الميزة قريباً');
-}
-
-function showAddDiscountModal() {
-    alert('إضافة كوبون خصم جديد - سيتم تطوير هذه الميزة قريباً');
-}
-
-function editTeamMember(memberId) {
-    alert('تعديل عضو الفريق - سيتم تطوير هذه الميزة قريباً');
-}
-
-function deleteTeamMember(memberId) {
-    if (confirm('هل أنت متأكد من حذف هذا العضو؟')) {
-        alert('تم حذف العضو - سيتم تطوير هذه الميزة قريباً');
-    }
-}
-
-function editDiscount(discountId) {
-    alert('تعديل كوبون الخصم - سيتم تطوير هذه الميزة قريباً');
-}
-
-function deleteDiscount(discountId) {
-    if (confirm('هل أنت متأكد من حذف هذا الكوبون؟')) {
-        alert('تم حذف الكوبون - سيتم تطوير هذه الميزة قريباً');
     }
 }
 
