@@ -7,10 +7,31 @@ from datetime import datetime
 import threading
 import time
 
+from flask import send_from_directory
+
 app = Flask(__name__)
 CORS(app) # Enable CORS for all routes
 
-DB_FILE = os.path.join(os.path.dirname(__file__), 'db.json')
+ROOT_DIR = os.path.dirname(__file__)
+DB_FILE = os.path.join(ROOT_DIR, 'db.json')
+
+# Serve frontend files
+@app.route('/')
+def serve_index():
+    return send_from_directory(ROOT_DIR, 'index.html')
+
+@app.route('/admin.html')
+def serve_admin():
+    return send_from_directory(ROOT_DIR, 'admin.html')
+
+@app.route('/order.html')
+def serve_order():
+    return send_from_directory(ROOT_DIR, 'order.html')
+
+@app.route('/js/<path:filename>')
+def serve_js(filename):
+    return send_from_directory(os.path.join(ROOT_DIR, 'js'), filename)
+
 
 db_lock = threading.Lock()
 
@@ -258,13 +279,20 @@ def get_stats():
         'revenue_by_month': revenue_by_month
     })
 
-import openai
-import os
-from werkzeug.utils import secure_filename
+try:
+    import openai
+    # Configure OpenAI (optional)
+    openai.api_key = os.getenv('OPENAI_API_KEY')
+    openai.api_base = os.getenv('OPENAI_API_BASE')
+except Exception:
+    openai = None
 
-# Configure OpenAI
-openai.api_key = os.getenv('OPENAI_API_KEY')
-openai.api_base = os.getenv('OPENAI_API_BASE')
+import requests
+import uuid
+
+# STCPay configuration (using Tap API)
+TAP_API_KEY = "sk_test_XKokBfNWv6FIYuTMg5sLPjhJ"  # Test key from documentation
+TAP_BASE_URL = "https://api.tap.company/v2"
 
 @app.route('/api/analyze-cv', methods=['POST'])
 def analyze_cv():
@@ -443,13 +471,6 @@ def analyze_cv():
     except Exception as e:
         print(f"CV analysis error: {e}")
         return jsonify({'success': False, 'message': 'حدث خطأ أثناء تحليل السيرة الذاتية'}), 500
-
-import requests
-import uuid
-
-# STCPay configuration (using Tap API)
-TAP_API_KEY = "sk_test_XKokBfNWv6FIYuTMg5sLPjhJ"  # Test key from documentation
-TAP_BASE_URL = "https://api.tap.company/v2"
 
 @app.route('/api/create-stcpay-payment', methods=['POST'])
 def create_stcpay_payment():
