@@ -9,6 +9,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+    <script src="js/config.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script>
         tailwind.config = {
@@ -376,57 +377,46 @@
         }
 
         try {
-            const response = await fetch(`${API_BASE}/api/orders/${orderId}`);
-            
-            if (!response.ok) {
+            if (!window.db) {
+                throw new Error('لم يتم تهيئة قاعدة البيانات');
+            }
+            const doc = await window.db.collection('orders').doc(orderId).get();
+            if (!doc.exists) {
                 throw new Error('Order not found');
             }
-
-            const order = await response.json();
-            displayOrderData(order);
+            const order = doc.data();
             
-        } catch (error) {
-            console.error('Error loading order:', error);
+            document.getElementById('orderNumber').textContent = orderId;
+            document.getElementById('customerName').textContent = order.personalInfo?.fullName || 'العميل';
+            document.getElementById('packageName').textContent = order.packageName || 'غير محدد';
+            document.getElementById('basePrice').textContent = `${order.basePrice || 0} ر.س`;
+            document.getElementById('totalPrice').textContent = `${order.totalPrice || 0} ر.س`;
+            
+            // Additional services
+            let additionalServices = [];
+            if (order.upsellServices?.coverLetter) additionalServices.push('خطاب التغطية');
+            if (order.upsellServices?.interviewPrep) additionalServices.push('محاكاة المقابلة');
+            document.getElementById('additionalServices').textContent = additionalServices.length > 0 ? additionalServices.join(', ') : 'لا يوجد';
+
+            // Order date
+            const orderDate = order.createdAt ? new Date(order.createdAt).toLocaleDateString('ar-SA') : 'غير محدد';
+            document.getElementById('orderDate').textContent = orderDate;
+            document.getElementById('receivedDate').textContent = orderDate;
+
+            // Status
+            const status = order.status || 'جديد';
+            const statusElement = document.getElementById('currentStatus');
+            statusElement.textContent = status;
+            statusElement.className = `font-medium px-3 py-1 rounded-full text-sm ${getStatusClass(status)}`;
+
+            // Assigned to
+            document.getElementById('assignedTo').textContent = order.assignedTo || 'غير مسند بعد';
+
+            // Update timeline based on status
+            updateTimeline(status);
+        } catch (e) {
             showError();
         }
-    }
-
-    function displayOrderData(order) {
-        // Hide loading screen
-        document.getElementById('loadingScreen').classList.add('hidden');
-        
-        // Show main content
-        document.getElementById('mainContent').classList.remove('hidden');
-
-        // Fill order information
-        document.getElementById('orderNumber').textContent = order.id || 'غير محدد';
-        document.getElementById('customerName').textContent = order.personalInfo?.fullName || 'العميل';
-        document.getElementById('packageName').textContent = order.packageName || 'غير محدد';
-        document.getElementById('basePrice').textContent = `${order.basePrice || 0} ر.س`;
-        document.getElementById('totalPrice').textContent = `${order.totalPrice || 0} ر.س`;
-        
-        // Additional services
-        let additionalServices = [];
-        if (order.upsellServices?.coverLetter) additionalServices.push('خطاب التغطية');
-        if (order.upsellServices?.interviewPrep) additionalServices.push('محاكاة المقابلة');
-        document.getElementById('additionalServices').textContent = additionalServices.length > 0 ? additionalServices.join(', ') : 'لا يوجد';
-
-        // Order date
-        const orderDate = order.createdAt ? new Date(order.createdAt).toLocaleDateString('ar-SA') : 'غير محدد';
-        document.getElementById('orderDate').textContent = orderDate;
-        document.getElementById('receivedDate').textContent = orderDate;
-
-        // Status
-        const status = order.status || 'جديد';
-        const statusElement = document.getElementById('currentStatus');
-        statusElement.textContent = status;
-        statusElement.className = `font-medium px-3 py-1 rounded-full text-sm ${getStatusClass(status)}`;
-
-        // Assigned to
-        document.getElementById('assignedTo').textContent = order.assignedTo || 'غير مسند بعد';
-
-        // Update timeline based on status
-        updateTimeline(status);
     }
 
     function updateTimeline(status) {

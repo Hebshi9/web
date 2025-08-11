@@ -411,25 +411,17 @@ async function handleOrderSubmit(event) {
     };
 
     try {
-        const response = await fetch(`${API_BASE}/api/orders`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(formData)
-        });
-        
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+        if (!window.db) {
+            throw new Error('لم يتم تهيئة قاعدة البيانات');
         }
+
+        // Create order in Firestore
+        const orderRef = await window.db.collection('orders').add(formData);
+        currentOrderId = orderRef.id;
+
+        console.log("Order submitted to Firestore:", { id: currentOrderId });
         
-        const result = await response.json();
-        currentOrderId = result.id; // Use 'id' from backend response
-        
-        console.log("Order submitted successfully:", result);
-        
-        // Show payment options modal
+        // Show payment options modal (uses currentOrderId)
         showPaymentModal(currentOrderId, formData.totalPrice, formData);
         closeOrderModal();
         
