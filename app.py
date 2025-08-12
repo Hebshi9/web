@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, make_response
 from flask_cors import CORS
 import json
 import os
@@ -10,6 +10,23 @@ import time
 app = Flask(__name__)
 # Explicit CORS allowing common methods
 CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=False)
+
+# Ensure CORS headers are always present
+@app.after_request
+def add_cors_headers(response):
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+    return response
+
+# Handle preflight
+@app.route('/api/<path:subpath>', methods=['OPTIONS'])
+def cors_preflight(subpath):
+    resp = make_response('', 204)
+    resp.headers['Access-Control-Allow-Origin'] = '*'
+    resp.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+    resp.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+    return resp
 
 DB_FILE = os.path.join(os.path.dirname(__file__), 'db.json')
 
