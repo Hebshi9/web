@@ -166,7 +166,7 @@ function handleFileUpload(event) {
     formData.append('cv_file', file);
 
     // Send to backend for analysis
-    fetch('https://5000-is20x6ners704x6gl1at6-16b15953.manusvm.computer/api/analyze-cv', {
+    fetch(api('/api/analyze-cv'), {
         method: 'POST',
         body: formData
     })
@@ -411,7 +411,7 @@ async function handleOrderSubmit(event) {
     };
 
     try {
-        const response = await fetch('https://5000-is20x6ners704x6gl1at6-16b15953.manusvm.computer/api/orders', {
+        const response = await fetch(api('/api/orders'), {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -484,7 +484,7 @@ function initiateSTCPayPayment(orderId, amount, orderDataStr) {
     stcPayBtn.disabled = true;
     
     // Create STCPay payment
-    fetch('https://5000-is20x6ners704x6gl1at6-16b15953.manusvm.computer/api/create-stcpay-payment', {
+    fetch(api('/api/create-stcpay-payment'), {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -570,7 +570,7 @@ function verifySTCPayOTP(chargeId, orderId) {
     verifyBtn.disabled = true;
     
     // Verify OTP
-    fetch('https://5000-is20x6ners704x6gl1at6-16b15953.manusvm.computer/api/verify-stcpay-otp', {
+    fetch(api('/api/verify-stcpay-otp'), {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -647,7 +647,7 @@ function showBankTransferInfo(orderId) {
 
 function showPaymentSuccess(orderId) {
     // Create order link
-    const orderLink = `https://ahagagiw.manus.space/order.html?id=${orderId}`;
+    const orderLink = `${window.location.origin}/order.html?id=${orderId}`;
     
     const successModal = document.createElement('div');
     successModal.className = 'modal-overlay';

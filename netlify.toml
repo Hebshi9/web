@@ -1,0 +1,15 @@
+[build]
+  publish = "."
+
+# Proxy API calls to your Flask backend (change the `to` URL to your backend domain)
+[[redirects]]
+  from = "/api/*"
+  to = "https://your-backend-domain.example.com/:splat"
+  status = 200
+  force = true
+
+# SPA fallback
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

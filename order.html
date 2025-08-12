@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="api-base-url" content="">
     <title>بوابة العميل - سلس</title>
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -358,6 +359,7 @@
     </div>
 
     <script src="js/firebase-config.js"></script>
+    <script src="js/config.js"></script>
     <script src="js/client-portal.js"></script>
     
     <script>
@@ -376,7 +378,7 @@
         }
 
         try {
-            const response = await fetch(`https://5000-is20x6ners704x6gl1at6-16b15953.manusvm.computer/api/orders/${orderId}`);
+            const response = await fetch(api(`/api/orders/${orderId}`));
             
             if (!response.ok) {
                 throw new Error('Order not found');

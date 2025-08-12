@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="api-base-url" content="">
     <title>لوحة التحكم - سلس</title>
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -484,6 +485,7 @@
     </div>
 
     <script src="js/firebase-config.js"></script>
+    <script src="js/config.js"></script>
     <script src="js/admin.js"></script>
     
     <script>
@@ -492,7 +494,7 @@
         // Override the loadDashboardData function
         window.loadDashboardData = async function() {
             try {
-                const response = await fetch('https://5000-ihu2eqlqjp7vakccehu8k-16b15953.manusvm.computer/api/orders');
+                const response = await fetch(api('/api/orders'));
                 if (response.ok) {
                     const data = await response.json();
                     allOrders = data.orders || [];

@@ -321,10 +321,10 @@ def create_stcpay_payment():
                 }
             },
             "post": {
-                "url": f"https://5000-ihu2eqlqjp7vakccehu8k-16b15953.manusvm.computer/api/stcpay-webhook"
+                "url": f"{(os.getenv('BACKEND_BASE_URL') or request.url_root.rstrip('/'))}/api/stcpay-webhook"
             },
             "redirect": {
-                "url": f"https://ahagagiw.manus.space/payment-success?order_id={order_id}"
+                "url": f"{(os.getenv('FRONTEND_BASE_URL') or request.headers.get('Origin') or 'http://localhost:8888').rstrip('/')}/order.html?id={order_id}"
             }
         }
         
