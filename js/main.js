@@ -166,7 +166,7 @@ function handleFileUpload(event) {
     formData.append('cv_file', file);
 
     // Send to backend for analysis
-    fetch('https://5000-is20x6ners704x6gl1at6-16b15953.manusvm.computer/api/analyze-cv', {
+    fetch(api('/api/analyze-cv'), {
         method: 'POST',
         body: formData
     })
@@ -405,18 +405,65 @@ async function handleOrderSubmit(event) {
         discountPercentage: discountPercentage,
         totalPrice: parseInt(document.getElementById('totalPrice')?.textContent.replace(' ر.س', '') || '0'),
         status: 'جديد',
-        createdAt: new Date().toISOString(),
         assignedTo: '',
         internalNotes: ''
     };
 
+    // Prefer Firebase on Netlify for immediate operation
     try {
-        const response = await fetch('https://5000-is20x6ners704x6gl1at6-16b15953.manusvm.computer/api/orders', {
+        if (window.db && window.firebase) {
+            const record = {
+                ...formData,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            const docRef = await db.collection('orders').add(record);
+            currentOrderId = docRef.id;
+
+            // Upsert customer document
+            const email = formData.personalInfo.email;
+            if (email) {
+                const existing = await db.collection('customers').where('email','==', email).limit(1).get();
+                if (!existing.empty) {
+                    const doc = existing.docs[0];
+                    const prevOrders = Array.isArray(doc.data().orders) ? doc.data().orders : [];
+                    await db.collection('customers').doc(doc.id).update({
+                        fullName: formData.personalInfo.fullName,
+                        phone: formData.personalInfo.phone,
+                        lastOrderDate: firebase.firestore.FieldValue.serverTimestamp(),
+                        orders: Array.from(new Set([...prevOrders, currentOrderId]))
+                    });
+                } else {
+                    await db.collection('customers').add({
+                        fullName: formData.personalInfo.fullName,
+                        phone: formData.personalInfo.phone,
+                        email,
+                        orders: [currentOrderId],
+                        lastOrderDate: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                }
+            }
+
+            console.log('Order saved to Firebase:', currentOrderId);
+            // For Netlify today: show success directly
+            showSuccessModal();
+            closeOrderModal();
+            return;
+        }
+    } catch (fbError) {
+        console.error('Firebase order save failed, will try API fallback:', fbError);
+    }
+
+    // Fallback to REST API if Firebase not available
+    try {
+        const response = await fetch(api('/api/orders'), {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(formData)
+            body: JSON.stringify({
+                ...formData,
+                createdAt: new Date().toISOString()
+            })
         });
         
         if (!response.ok) {
@@ -427,10 +474,9 @@ async function handleOrderSubmit(event) {
         const result = await response.json();
         currentOrderId = result.id; // Use 'id' from backend response
         
-        console.log("Order submitted successfully:", result);
-        
-        // Show payment options modal
-        showPaymentModal(currentOrderId, formData.totalPrice, formData);
+        console.log("Order submitted successfully via API:", result);
+        // Show success (skip payment until API configured)
+        showSuccessModal();
         closeOrderModal();
         
     } catch (error) {
@@ -440,6 +486,7 @@ async function handleOrderSubmit(event) {
 }
 
 function showPaymentModal(orderId, amount, orderData) {
+    const includeStcPay = Boolean(window.API_BASE_URL);
     const paymentModal = document.createElement('div');
     paymentModal.className = 'modal-overlay';
     paymentModal.id = 'paymentModal';
@@ -455,13 +502,12 @@ function showPaymentModal(orderId, amount, orderData) {
                     <p><strong>المبلغ الإجمالي:</strong> ${amount} ر.س</p>
                     <p><strong>رقم الطلب:</strong> ${orderId}</p>
                 </div>
-                
                 <div class="payment-methods">
+                    ${includeStcPay ? `
                     <button class="payment-method-btn stcpay-btn" onclick="initiateSTCPayPayment('${orderId}', ${amount}, ${JSON.stringify(orderData).replace(/"/g, '&quot;')})">
                         <i class="fas fa-mobile-alt"></i>
                         الدفع عبر STC Pay
-                    </button>
-                    
+                    </button>` : ''}
                     <button class="payment-method-btn bank-transfer-btn" onclick="showBankTransferInfo('${orderId}')">
                         <i class="fas fa-university"></i>
                         التحويل البنكي
@@ -484,7 +530,7 @@ function initiateSTCPayPayment(orderId, amount, orderDataStr) {
     stcPayBtn.disabled = true;
     
     // Create STCPay payment
-    fetch('https://5000-is20x6ners704x6gl1at6-16b15953.manusvm.computer/api/create-stcpay-payment', {
+    fetch(api('/api/create-stcpay-payment'), {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -570,7 +616,7 @@ function verifySTCPayOTP(chargeId, orderId) {
     verifyBtn.disabled = true;
     
     // Verify OTP
-    fetch('https://5000-is20x6ners704x6gl1at6-16b15953.manusvm.computer/api/verify-stcpay-otp', {
+    fetch(api('/api/verify-stcpay-otp'), {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -647,7 +693,7 @@ function showBankTransferInfo(orderId) {
 
 function showPaymentSuccess(orderId) {
     // Create order link
-    const orderLink = `https://ahagagiw.manus.space/order.html?id=${orderId}`;
+    const orderLink = `${window.location.origin}/order.html?id=${orderId}`;
     
     const successModal = document.createElement('div');
     successModal.className = 'modal-overlay';
