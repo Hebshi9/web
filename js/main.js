@@ -4,6 +4,34 @@ let basePrice = 0;
 let discountPercentage = 0;
 let currentOrderId = null;
 
+// Prefer these API base URLs in order; will try next if one fails
+const API_BASE_URLS = [
+    'https://5000-is20x6ners704x6gl1at6-16b15953.manusvm.computer/api',
+    'https://5000-ihu2eqlqjp7vakccehu8k-16b15953.manusvm.computer/api'
+];
+
+async function apiRequest(path, options = {}) {
+    let lastError;
+    for (const base of API_BASE_URLS) {
+        try {
+            const res = await fetch(`${base}${path}`, options);
+            if (res.ok) {
+                // Try to parse JSON; if fails, return raw Response clone
+                try {
+                    return await res.json();
+                } catch (_) {
+                    return await res.text();
+                }
+            } else {
+                lastError = new Error(`HTTP ${res.status}`);
+            }
+        } catch (err) {
+            lastError = err;
+        }
+    }
+    throw lastError || new Error('Network error');
+}
+
 // Package data
 const packages = {
     'basic': {
@@ -166,16 +194,15 @@ function handleFileUpload(event) {
     formData.append('cv_file', file);
 
     // Send to backend for analysis
-    fetch('https://5000-is20x6ners704x6gl1at6-16b15953.manusvm.computer/api/analyze-cv', {
+    apiRequest('/analyze-cv', {
         method: 'POST',
         body: formData
     })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
+    .then((data) => {
+        if (data && data.success) {
             showCVAnalysisResult(data.analysis);
         } else {
-            throw new Error(data.message || 'فشل في تحليل السيرة الذاتية');
+            throw new Error((data && data.message) || 'فشل في تحليل السيرة الذاتية');
         }
     })
     .catch(error => {
@@ -411,28 +438,23 @@ async function handleOrderSubmit(event) {
     };
 
     try {
-        const response = await fetch('https://5000-is20x6ners704x6gl1at6-16b15953.manusvm.computer/api/orders', {
+        const result = await apiRequest('/orders', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(formData)
         });
-        
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+
+        if (!result || !result.id) {
+            throw new Error('استجابة غير متوقعة من الخادم');
         }
-        
-        const result = await response.json();
-        currentOrderId = result.id; // Use 'id' from backend response
-        
+
+        currentOrderId = result.id;
         console.log("Order submitted successfully:", result);
-        
+
         // Show payment options modal
         showPaymentModal(currentOrderId, formData.totalPrice, formData);
         closeOrderModal();
-        
+
     } catch (error) {
         console.error("Error saving order:", error);
         alert(`حدث خطأ في إرسال الطلب: ${error.message}. يرجى المحاولة مرة أخرى.`);
@@ -484,14 +506,12 @@ function initiateSTCPayPayment(orderId, amount, orderDataStr) {
     stcPayBtn.disabled = true;
     
     // Create STCPay payment
-    fetch('https://5000-is20x6ners704x6gl1at6-16b15953.manusvm.computer/api/create-stcpay-payment', {
+    apiRequest('/create-stcpay-payment', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             amount: amount,
-            phone_number: '0503678789', // Your provided number
+            phone_number: '0503678789',
             order_id: orderId,
             customer: {
                 name: orderData.personalInfo.fullName,
@@ -500,12 +520,11 @@ function initiateSTCPayPayment(orderId, amount, orderDataStr) {
             }
         })
     })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
+    .then((data) => {
+        if (data && data.success) {
             showOTPModal(data.charge_id, orderId);
         } else {
-            throw new Error(data.message || 'فشل في إنشاء طلب الدفع');
+            throw new Error((data && data.message) || 'فشل في إنشاء طلب الدفع');
         }
     })
     .catch(error => {
@@ -570,23 +589,17 @@ function verifySTCPayOTP(chargeId, orderId) {
     verifyBtn.disabled = true;
     
     // Verify OTP
-    fetch('https://5000-is20x6ners704x6gl1at6-16b15953.manusvm.computer/api/verify-stcpay-otp', {
+    apiRequest('/verify-stcpay-otp', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            charge_id: chargeId,
-            otp: otp
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ charge_id: chargeId, otp: otp })
     })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success && data.status === 'CAPTURED') {
+    .then((data) => {
+        if (data && data.success && data.status === 'CAPTURED') {
             closeOTPModal();
             showPaymentSuccess(orderId);
         } else {
-            alert(data.message || 'رمز التحقق غير صحيح');
+            alert((data && data.message) || 'رمز التحقق غير صحيح');
             verifyBtn.innerHTML = 'تأكيد الدفع';
             verifyBtn.disabled = false;
         }
@@ -647,7 +660,7 @@ function showBankTransferInfo(orderId) {
 
 function showPaymentSuccess(orderId) {
     // Create order link
-    const orderLink = `https://ahagagiw.manus.space/order.html?id=${orderId}`;
+    const orderLink = `${window.location.origin}/order.html?id=${orderId}`;
     
     const successModal = document.createElement('div');
     successModal.className = 'modal-overlay';
@@ -778,4 +791,8 @@ window.showSuccessModal = showSuccessModal;
 window.closeSuccessModal = closeSuccessModal;
 window.copyPortalLink = copyPortalLink;
 window.shareViaWhatsApp = shareViaWhatsApp;
+
+// Expose API base URLs globally for inline scripts (admin/order pages)
+window.API_BASE_URLS = API_BASE_URLS;
+window.apiRequest = apiRequest;
 

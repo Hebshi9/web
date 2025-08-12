@@ -483,6 +483,7 @@
         </div>
     </div>
 
+    <script src="js/main.js"></script>
     <script src="js/firebase-config.js"></script>
     <script src="js/admin.js"></script>
     
@@ -492,14 +493,49 @@
         // Override the loadDashboardData function
         window.loadDashboardData = async function() {
             try {
-                const response = await fetch('https://5000-ihu2eqlqjp7vakccehu8k-16b15953.manusvm.computer/api/orders');
-                if (response.ok) {
-                    const data = await response.json();
+                // Use shared helper if available
+                if (window.apiRequest) {
+                    const data = await window.apiRequest('/orders');
                     allOrders = data.orders || [];
-                    console.log('Loaded orders:', allOrders);
                 } else {
-                    console.error('Failed to load orders');
-                    allOrders = [];
+                    const bases = window.API_BASE_URLS || [
+                        'https://5000-is20x6ners704x6gl1at6-16b15953.manusvm.computer/api',
+                        'https://5000-ihu2eqlqjp7vakccehu8k-16b15953.manusvm.computer/api'
+                    ];
+                    let loaded = false;
+                    for (const base of bases) {
+                        try {
+                            const response = await fetch(`${base}/orders`);
+                            if (response.ok) {
+                                const data = await response.json();
+                                allOrders = data.orders || [];
+                                loaded = true;
+                                break;
+                            }
+                        } catch (_) {}
+                    }
+                    if (!loaded) allOrders = [];
+                }
+                console.log('Loaded orders:', allOrders);
+                // Load customers as well
+                try {
+                    if (window.apiRequest) {
+                        allCustomers = await window.apiRequest('/customers');
+                    } else {
+                        const bases2 = window.API_BASE_URLS || [
+                            'https://5000-is20x6ners704x6gl1at6-16b15953.manusvm.computer/api',
+                            'https://5000-ihu2eqlqjp7vakccehu8k-16b15953.manusvm.computer/api'
+                        ];
+                        for (const base of bases2) {
+                            try {
+                                const resp = await fetch(`${base}/customers`);
+                                if (resp.ok) { allCustomers = await resp.json(); break; }
+                            } catch (_) {}
+                        }
+                    }
+                } catch (e) {
+                    console.error('Failed to load customers', e);
+                    allCustomers = [];
                 }
             } catch (error) {
                 console.error('Error loading dashboard data:', error);
