@@ -368,12 +368,29 @@ async function updateOrder(orderId) {
     const internalNotes = document.getElementById('orderNotes').value;
     
     try {
-        await db.collection('orders').doc(orderId).update({
-            status: status,
-            assignedTo: assignedTo,
-            internalNotes: internalNotes,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
+        // Use backend API instead of Firebase
+        const payload = { status, assignedTo, internalNotes };
+        if (window.apiRequest) {
+            await window.apiRequest(`/orders/${orderId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+        } else {
+            const bases = window.API_BASE_URLS || [];
+            let ok = false;
+            for (const base of bases) {
+                try {
+                    const res = await fetch(`${base}/orders/${orderId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (res.ok) { ok = true; break; }
+                } catch (_) {}
+            }
+            if (!ok) throw new Error('Network error');
+        }
         
         // Update local data
         const orderIndex = allOrders.findIndex(o => o.id === orderId);
@@ -397,7 +414,19 @@ async function deleteOrder(orderId) {
     if (!confirm('هل أنت متأكد من حذف هذا الطلب؟')) return;
     
     try {
-        await db.collection('orders').doc(orderId).delete();
+        if (window.apiRequest) {
+            await window.apiRequest(`/orders/${orderId}`, { method: 'DELETE' });
+        } else {
+            const bases = window.API_BASE_URLS || [];
+            let ok = false;
+            for (const base of bases) {
+                try {
+                    const res = await fetch(`${base}/orders/${orderId}`, { method: 'DELETE' });
+                    if (res.ok) { ok = true; break; }
+                } catch (_) {}
+            }
+            if (!ok) throw new Error('Network error');
+        }
         allOrders = allOrders.filter(o => o.id !== orderId);
         displayOrders(allOrders);
         alert('تم حذف الطلب بنجاح');
@@ -480,14 +509,7 @@ function loadTeamData() {
         
         teamMembers = defaultMembers;
         
-        // Save to Firebase
-        defaultMembers.forEach(async (member) => {
-            try {
-                await db.collection('team').doc(member.id).set(member);
-            } catch (error) {
-                console.error('Error adding team member:', error);
-            }
-        });
+        // Skipping remote persistence for team in this version
     }
     
     teamMembers.forEach(member => {

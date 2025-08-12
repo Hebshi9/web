@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, make_response
 from flask_cors import CORS
 import json
 import os
@@ -8,7 +8,25 @@ import threading
 import time
 
 app = Flask(__name__)
-CORS(app) # Enable CORS for all routes
+# Explicit CORS allowing common methods
+CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=False)
+
+# Ensure CORS headers are always present
+@app.after_request
+def add_cors_headers(response):
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+    return response
+
+# Handle preflight
+@app.route('/api/<path:subpath>', methods=['OPTIONS'])
+def cors_preflight(subpath):
+    resp = make_response('', 204)
+    resp.headers['Access-Control-Allow-Origin'] = '*'
+    resp.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+    resp.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+    return resp
 
 DB_FILE = os.path.join(os.path.dirname(__file__), 'db.json')
 
@@ -428,6 +446,47 @@ def stcpay_webhook():
     except Exception as e:
         print(f"STCPay webhook error: {e}")
         return jsonify({'success': False}), 500
+
+@app.route('/api/orders/<order_id>', methods=['PUT'])
+def update_order(order_id):
+    try:
+        updates = request.json or {}
+        db_data = read_db()
+        updated = False
+        for order in db_data['orders']:
+            if order['id'] == order_id:
+                # Update only known fields
+                for key in ['status', 'assignedTo', 'internalNotes', 'payment_status', 'payment_method']:
+                    if key in updates:
+                        order[key] = updates[key]
+                order['updatedAt'] = datetime.now().isoformat()
+                updated = True
+                break
+        if not updated:
+            return jsonify({'message': 'Order not found'}), 404
+        write_db(db_data)
+        return jsonify({'success': True})
+    except Exception as e:
+        print(f"Update order error: {e}")
+        return jsonify({'success': False, 'message': 'Failed to update order'}), 500
+
+@app.route('/api/orders/<order_id>', methods=['DELETE'])
+def delete_order(order_id):
+    try:
+        db_data = read_db()
+        original_len = len(db_data['orders'])
+        db_data['orders'] = [o for o in db_data['orders'] if o.get('id') != order_id]
+        # Remove reference from customers
+        for customer in db_data['customers']:
+            if 'orders' in customer and order_id in customer['orders']:
+                customer['orders'] = [oid for oid in customer['orders'] if oid != order_id]
+        if len(db_data['orders']) == original_len:
+            return jsonify({'message': 'Order not found'}), 404
+        write_db(db_data)
+        return jsonify({'success': True})
+    except Exception as e:
+        print(f"Delete order error: {e}")
+        return jsonify({'success': False, 'message': 'Failed to delete order'}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
