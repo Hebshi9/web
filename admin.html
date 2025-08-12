@@ -489,20 +489,20 @@
     <script src="js/admin.js"></script>
     
     <script>
-    // Override admin.js functions to use our backend API
+    // Override admin.js functions to ensure UI is consistent (Firestore-first)
     document.addEventListener('DOMContentLoaded', function() {
         // Override the loadDashboardData function
         window.loadDashboardData = async function() {
             try {
-                const response = await fetch(api('/api/orders'));
-                if (response.ok) {
-                    const data = await response.json();
-                    allOrders = data.orders || [];
-                    console.log('Loaded orders:', allOrders);
+                if (window.db) {
+                    const ordersSnap = await db.collection('orders').orderBy('createdAt','desc').get();
+                    allOrders = ordersSnap.docs.map(d => ({ id: d.id, ...d.data(), createdAt: (d.data().createdAt && d.data().createdAt.toDate ? d.data().createdAt.toDate().toISOString() : null) }));
                 } else {
-                    console.error('Failed to load orders');
-                    allOrders = [];
+                    const response = await fetch(api('/api/orders'));
+                    const data = response.ok ? await response.json() : { orders: [] };
+                    allOrders = data.orders || [];
                 }
+                console.log('Loaded orders:', allOrders);
             } catch (error) {
                 console.error('Error loading dashboard data:', error);
                 allOrders = [];

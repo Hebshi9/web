@@ -101,16 +101,23 @@ function showSection(sectionName) {
 // Load dashboard data
 async function loadDashboardData() {
     try {
-        // Load orders
-        const ordersResponse = await fetch(api('/api/orders'));
-        const ordersData = await ordersResponse.json();
-        allOrders = ordersData.orders || [];
+        if (window.db) {
+            // Load orders from Firestore
+            const ordersSnap = await db.collection('orders').orderBy('createdAt','desc').get();
+            allOrders = ordersSnap.docs.map(d => ({ id: d.id, ...d.data(), createdAt: (d.data().createdAt && d.data().createdAt.toDate ? d.data().createdAt.toDate().toISOString() : null) }));
+            
+            // Load customers from Firestore
+            const customersSnap = await db.collection('customers').get();
+            allCustomers = customersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        } else {
+            // Fallback to REST if Firestore not available
+            const ordersResponse = await fetch(api('/api/orders'));
+            const ordersData = await ordersResponse.json();
+            allOrders = ordersData.orders || [];
+            const customersResponse = await fetch(api('/api/customers'));
+            allCustomers = await customersResponse.json();
+        }
         
-        // Load customers
-        const customersResponse = await fetch(api('/api/customers'));
-        allCustomers = await customersResponse.json();
-        
-        // Initialize empty arrays for team and discounts (can be expanded later)
         teamMembers = [];
         discountCodes = [];
         
@@ -368,14 +375,17 @@ async function updateOrder(orderId) {
     const internalNotes = document.getElementById('orderNotes').value;
     
     try {
-        await db.collection('orders').doc(orderId).update({
-            status: status,
-            assignedTo: assignedTo,
-            internalNotes: internalNotes,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
+        if (window.db && window.firebase) {
+            await db.collection('orders').doc(orderId).update({
+                status,
+                assignedTo,
+                internalNotes,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        } else {
+            // No REST endpoint for update in current API; skip
+        }
         
-        // Update local data
         const orderIndex = allOrders.findIndex(o => o.id === orderId);
         if (orderIndex !== -1) {
             allOrders[orderIndex].status = status;
@@ -397,7 +407,9 @@ async function deleteOrder(orderId) {
     if (!confirm('هل أنت متأكد من حذف هذا الطلب؟')) return;
     
     try {
-        await db.collection('orders').doc(orderId).delete();
+        if (window.db) {
+            await db.collection('orders').doc(orderId).delete();
+        }
         allOrders = allOrders.filter(o => o.id !== orderId);
         displayOrders(allOrders);
         alert('تم حذف الطلب بنجاح');

@@ -363,7 +363,7 @@
     <script src="js/client-portal.js"></script>
     
     <script>
-    // Override client-portal.js to use our backend API
+    // Override client-portal.js to Firebase-first load (fallback to API if needed)
     document.addEventListener('DOMContentLoaded', function() {
         loadOrderData();
     });
